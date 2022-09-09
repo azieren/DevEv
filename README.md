@@ -17,6 +17,7 @@ Open a python terminal by wrting "python" in your command line
 In the command interpreter:
 
 > Import DevEv
+> 
 > DevEv.run()
 
 
