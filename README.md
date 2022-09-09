@@ -6,7 +6,7 @@ Visualizing, analizing and correcting 3D visual attention
 
 # Install
 
-pip install -i https://test.pypi.org/simple/ DevEv==0.0.2
+pip install -i https://test.pypi.org/simple/ DevEv
 
 # Utilization
 
