@@ -6,13 +6,11 @@ Visualizing, analizing and correcting 3D visual attention
 
 # Install
 
-pip install -i https://test.pypi.org/simple/ DevEv=="version"
-
-The latest version is 0.0.2
+pip install -i https://test.pypi.org/simple/ DevEv==0.0.2
 
 # Utilization
 
-Open a python terminal by wrting "python" in your command line
+Open a python terminal by writing "python" in your command line or in a python script:
 
 In the command interpreter:
 
