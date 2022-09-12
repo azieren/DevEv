@@ -12,7 +12,7 @@ from DevEv.ViewerCorrection.WidgetCorrection import CorrectionWindow
 
 class VideoWindow(QMainWindow):
 
-    def __init__(self, parent=None):
+    def __init__(self, video_file=None, att_file=None, parent=None):
         super(VideoWindow, self).__init__(parent)
         self.setWindowTitle("DevEnv") 
         self.move(200, 100)
@@ -257,18 +257,24 @@ class VideoWindow(QMainWindow):
         self.setCentralWidget(wid)
         wid.setLayout(mainlayout)
 
+        if video_file is not None:
+            self.setFile(video_file)
+        if att_file is not None:
+            self.main3Dviewer.attention = self.main3Dviewer.read_attention(att_file)
+
+    def setFile(self, filename):
+        self.mediaPlayer.set_file(filename)
+        self.playButton.setEnabled(True)
+        self.positionSlider.setRange(0, self.mediaPlayer.duration)
+        self.minInt.setTop(self.mediaPlayer.duration - 10)
+        self.maxInt.setTop(self.mediaPlayer.duration)
+        self.correctionWidget.setHW(self.mediaPlayer.height_video, self.mediaPlayer.width_video)       
 
     def openFile(self):
         fileName, _ = QFileDialog.getOpenFileName(self, "Open Movie",
                 QDir.homePath())
-
         if fileName != '':
-            self.mediaPlayer.set_file(fileName)
-            self.playButton.setEnabled(True)
-            self.positionSlider.setRange(0, self.mediaPlayer.duration)
-            self.minInt.setTop(self.mediaPlayer.duration - 10)
-            self.maxInt.setTop(self.mediaPlayer.duration)
-            self.correctionWidget.setHW(self.mediaPlayer.height_video, self.mediaPlayer.width_video)
+            self.setFile(fileName)
 
     def openFileAtt(self):
         fileName, _ = QFileDialog.getOpenFileName(self, "Open Attention",
@@ -438,9 +444,16 @@ class VideoWindow(QMainWindow):
         return
        
 
-def run():
+def run(video_file=None, att_file=None):
+    """
+    run(video_file=None, att_file=None) function run the GUI for visualizaing video
+
+    :video_file (Optionnal): video file to visualize, if nothing is provided the video wiget will be empty
+    :att_file (Optionnal): attention file containing 3D data, if nothing is provided the 3D wigdet will just display the room
+    :return: Nothing, the application ends when the GUI is closed
+    """ 
     app = QApplication(sys.argv)
-    player = VideoWindow()
+    player = VideoWindow(video_file=video_file, att_file=att_file)
     player.resize(640+520 , 480)
     player.show()
     sys.exit(app.exec_())

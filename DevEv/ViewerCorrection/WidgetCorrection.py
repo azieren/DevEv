@@ -1,5 +1,6 @@
-from PyQt5.QtWidgets import QStyle, QPushButton, QLabel, QVBoxLayout, QWidget, QHBoxLayout, QFileDialog, QMessageBox
-from PyQt5.QtCore import pyqtSignal, QDir
+from PyQt5.QtWidgets import QStyle, QPushButton, QLabel, QVBoxLayout, QWidget, QHBoxLayout, QFileDialog, QMessageBox, QListWidget, \
+                                QAbstractItemView, QInputDialog, QListWidgetItem
+from PyQt5.QtCore import pyqtSignal, QDir, Qt
 #from PyQt5.QtGui import QMessageBox
 import pyqtgraph as pg
 import cv2
@@ -10,6 +11,14 @@ from matplotlib import pyplot as plt
 from scipy import interpolate
 
 from .GaussianProcess import get_uncertainty
+
+class ListWidgetItem(QListWidgetItem):
+    def __lt__(self, other):
+        try:
+            return float(self.text()) < float(other.text())
+        except Exception:
+            return QListWidgetItem.__lt__(self, other)
+
 
 def rotation_matrix_from_vectors(a, b):
     c = np.dot(a, b)
@@ -59,18 +68,35 @@ class CorrectionWindow(QWidget):
         super().__init__()
 
         self.setWindowTitle("Correction Tool") 
-        self.resize(400 , 100 )
+        self.resize(400 , 200 )
 
         self.viewer3D = viewer3D
-        self.frame_list = [10, 200, 220, 4400, 4800, 4990]
+        self.frame_list = sorted(list(range(0, 300, 20)))#[0, 100, 200, 300]
         self.curr_indice = 0
         self.corrected_list = []
         ## Init cameras
         self.setHW(0, 0)
 
+        self.frame_listW = QListWidget()
+        self.frame_listW.setSelectionMode(QAbstractItemView.SingleSelection)
+        for f in self.frame_list:
+            self.frame_listW.addItem(ListWidgetItem(str(f)))
+        self.frame_listW.itemDoubleClicked.connect(self.select_frame)
+        self.frame_listW.setCurrentRow(self.curr_indice)
+        self.frame_listW.setSortingEnabled(True)
         ## Some text
         self.framelabel = QLabel("Frame: " + str(self.frame_list[self.curr_indice]))
-        self.nextframelabel = QLabel("Next Frame: " + str(self.frame_list[(self.curr_indice + 1) % len(self.frame_list)]))
+        #self.nextframelabel = QLabel("Next Frame: " + str(self.frame_list[(self.curr_indice + 1) % len(self.frame_list)]))
+
+        self.addButton = QPushButton("&+")
+        self.addButton.setEnabled(True)
+        self.addButton.setStatusTip('add a frame for correction')
+        self.addButton.clicked.connect(self.add_frame)
+
+        self.removeButton = QPushButton("&-")
+        self.removeButton.setEnabled(True)
+        self.removeButton.setStatusTip('remove a frame from correction')
+        self.removeButton.clicked.connect(self.remove_frame)
 
         ## Button
         self.prevframeButton = QPushButton("&Previous")
@@ -190,9 +216,15 @@ class CorrectionWindow(QWidget):
         layoutButton.addWidget(self.frameButton)
         layoutButton.addWidget(self.nextframeButton)
 
+
+        layoutFrameList = QVBoxLayout()
+        layoutFrameList.addWidget(self.framelabel)
+        layoutFrameList.addWidget(self.addButton)
+        layoutFrameList.addWidget(self.removeButton)
+
         layoutInfo = QHBoxLayout()
-        layoutInfo.addWidget(self.framelabel)
-        layoutInfo.addWidget(self.nextframelabel)
+        layoutInfo.addWidget(self.frame_listW)
+        layoutInfo.addLayout(layoutFrameList)
 
         layoutLeft = QVBoxLayout()
         layoutLeft.addLayout(layoutButton)    
@@ -250,6 +282,44 @@ class CorrectionWindow(QWidget):
             self.h, self.w = 1080, 1920
         return
 
+    def select_frame(self, item):
+        self.curr_indice = self.frame_listW.currentRow()
+        self.update_frame()
+        return
+
+    def add_frame(self):
+        value, ok = QInputDialog.getInt(self, 'Add frame', 'Enter a frame number to add \n(single entry)')
+        if value in self.frame_list:
+            print("Frame already selected")
+            return
+        if value not in self.viewer3D.attention:
+            print("Frame does not have attention")
+            return            
+        if ok:
+            self.frame_list.append(value)
+            self.frame_list = sorted(self.frame_list)
+
+            self.frame_listW.addItem(ListWidgetItem(str(value)))
+            self.curr_indice = self.frame_listW.currentRow()
+            if len(self.frame_list) == 1: 
+                self.frame_listW.setCurrentRow(0)
+                self.curr_indice = 0
+                self.update_frame()
+
+    def remove_frame(self):
+        if len(self.frame_list) == 0: 
+            return
+        f = self.frame_list[self.curr_indice]
+        del self.frame_list[self.curr_indice]
+        self.frame_listW.takeItem(self.curr_indice)
+        self.curr_indice = self.frame_listW.currentRow()
+        if f in self.corrected_list:
+            self.corrected_list.remove(f)
+        if len(self.frame_list) == 0: 
+            self.curr_indice = -1
+            self.framelabel.setText("No Frames")
+        self.update_frame()
+
     def update_info(self):
         curr_frame = self.frame_list[self.curr_indice]
         if not curr_frame in self.viewer3D.attention:
@@ -273,22 +343,26 @@ class CorrectionWindow(QWidget):
         return
 
     def update_frame(self):
+        if self.curr_indice == -1: return
         curr_frame = self.frame_list[self.curr_indice]
         self.frame_id.emit(curr_frame)
         self.framelabel.setText("Frame: " + str(curr_frame))
-        self.nextframelabel.setText("Next Frame: " + str(self.frame_list[(self.curr_indice + 1) % len(self.frame_list)]))
         self.update_info()
         self.pose2d.emit({})
         return
 
     def next_frame(self):
+        if self.curr_indice == -1: return
         self.curr_indice = (self.curr_indice + 1) % len(self.frame_list) 
+        self.frame_listW.setCurrentRow(self.curr_indice)
         self.update_frame()
-        self.pose2d.emit({})
+        #self.pose2d.emit({})
         return
 
     def prev_frame(self):
+        if self.curr_indice == -1: return
         self.curr_indice = (self.curr_indice - 1) % len(self.frame_list) 
+        self.frame_listW.setCurrentRow(self.curr_indice)
         self.update_frame()
         return
 
@@ -332,6 +406,7 @@ class CorrectionWindow(QWidget):
         return
 
     def save_pos(self):
+        if self.curr_indice == -1: return
         curr_frame = self.frame_list[self.curr_indice]
         x, y, z = self.max_XEdit.value(), self.max_YEdit.value(), self.max_ZEdit.value()
         x_, y_, z_ = self.max_YawEdit.value(), self.max_PitchEdit.value(), self.max_RollEdit.value()
@@ -347,6 +422,7 @@ class CorrectionWindow(QWidget):
         self.frame_id.emit(curr_frame)
         if curr_frame not in self.corrected_list:
             self.corrected_list.append(curr_frame)
+        self.frame_listW.item(self.curr_indice).setBackground(Qt.green)
         return
 
     def project2D(self):    
@@ -387,14 +463,24 @@ class CorrectionWindow(QWidget):
             #plt.plot(x_tr, "-g")
             #plt.show()
         self.write_attention()
-        self.frame_list = get_uncertainty(x_tr)
+        self.frame_list = sorted(get_uncertainty(x_tr))
+        if len(self.frame_list == 0):
+            self.curr_indice = -1
+            self.frame_listW.clear()
+            return
+
         self.curr_indice = 0
+        self.frame_listW.clear()
+        self.frame_listW.addItems([str(f) for f in self.frame_list])
+        self.frame_listW.setCurrentRow(0)
         self.corrected_list = []
         self.update_frame()
         return
 
     def write_attention(self):
         fileName, _ = QFileDialog.getSaveFileName(self, "Save Corrected Results", QDir.homePath() + "/corrected.txt", "Text files (*.txt)")
+        if fileName == '':
+            return
         with open(fileName, "w") as w:
             w.write("")
             for f, p in self.viewer3D.attention.items():
