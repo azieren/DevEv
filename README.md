@@ -5,7 +5,9 @@ Visualizing, analizing and correcting 3D visual attention
 
 # Dependencies
 pip install -r requirement.txt
+
  Alternatively
+ 
 pip install numpy scipy matplotlib opencv-python pyqtgraph PyQt5 PyOpenGL
 
 
