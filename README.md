@@ -3,6 +3,11 @@
 Visualization tool for watching in real time the 3D reconstruction of the visual attention of an infant locomoting in a room.
 Visualizing, analizing and correcting 3D visual attention
 
+# Dependencies
+pip install -r requirement.txt
+ Alternatively
+pip install numpy scipy matplotlib opencv-python pyqtgraph PyQt5 PyOpenGL
+
 
 # Install
 

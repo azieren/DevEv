@@ -2,14 +2,17 @@ import setuptools
 
 setuptools.setup(
     name="DevEv",
-    version="0.0.2",
+    version="0.0.7",
     url="https://github.com/azieren/DevEv",
     author="Nicolas Aziere",
     author_email="nicolas.aziere@gmail.com",
     description="3D visualization tool",
     long_description=open('README.md').read(),
     packages=setuptools.find_packages(),
-    install_requires=[],
+    install_requires=['numpy',
+        'matplotlib',
+        'scipy',
+        'opencv-python'],
     classifiers=[
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python',
@@ -17,5 +20,4 @@ setuptools.setup(
         'Programming Language :: Python :: 3.6',
     ],
     include_package_data=True,
-    package_data={'DevEv': ['metadata/CameraParameters/*', 'metadata/RoomData/*']},
 )
