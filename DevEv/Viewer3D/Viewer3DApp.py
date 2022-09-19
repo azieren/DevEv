@@ -453,10 +453,7 @@ class View3D(gl.GLViewWidget):
             if f not in self.attention: 
                 continue
             if self.color_code == 1:
-                #color.append(list( cm.jet(count/ (1.0*total)) ))
-                if 0<f<2220: color.append([1.0, 0.0, 0.0, 0.4])
-                elif 2450<f<4550: color.append([0.0, 1.0, 0.0, 0.4])
-                else: color.append([0.0, 0.0, 1.0, 0.4])
+                color.append(list( cm.jet(count/ (1.0*total)) ))
             else:
                 color.append(list(self.base_color_t))
             points.append(self.attention[f]["att"])

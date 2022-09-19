@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="DevEv",
-    version="0.0.7",
+    version="0.0.8",
     url="https://github.com/azieren/DevEv",
     author="Nicolas Aziere",
     author_email="nicolas.aziere@gmail.com",
@@ -12,7 +12,8 @@ setuptools.setup(
     install_requires=['numpy',
         'matplotlib',
         'scipy',
-        'opencv-python'],
+        'opencv-python',
+        'PyOpenGL'],
     classifiers=[
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python',

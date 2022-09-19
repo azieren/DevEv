@@ -409,7 +409,10 @@ class VideoWindow(QMainWindow):
         if b.text() == "None":
             if b.isChecked() == True:
                 self.main3Dviewer.line_type = 3
-        self.changeShowAllmax()
+        if self.showAllButton.isChecked():
+            self.changeShowAllmax()
+        else:
+            self.setPosition(self.positionSlider.value())
         return
 
     def toggle_viz(self, b):

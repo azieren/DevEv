@@ -462,25 +462,28 @@ class CorrectionWindow(QWidget):
             #plt.plot(x_interp, "-b")
             #plt.plot(x_tr, "-g")
             #plt.show()
-        self.write_attention()
+        self.write_attention("temp.txt")
         self.frame_list = sorted(get_uncertainty(x_tr))
-        if len(self.frame_list == 0):
+        print(self.frame_list)
+        if len(self.frame_list) == 0:
             self.curr_indice = -1
             self.frame_listW.clear()
             return
 
         self.curr_indice = 0
         self.frame_listW.clear()
-        self.frame_listW.addItems([str(f) for f in self.frame_list])
+        for f in self.frame_list:
+            self.frame_listW.addItem(ListWidgetItem(str(f)))
         self.frame_listW.setCurrentRow(0)
         self.corrected_list = []
         self.update_frame()
         return
 
-    def write_attention(self):
-        fileName, _ = QFileDialog.getSaveFileName(self, "Save Corrected Results", QDir.homePath() + "/corrected.txt", "Text files (*.txt)")
-        if fileName == '':
-            return
+    def write_attention(self, fileName = None):
+        if fileName is None:
+            fileName, _ = QFileDialog.getSaveFileName(self, "Save Corrected Results", QDir.homePath() + "/corrected.txt", "Text files (*.txt)")
+            if fileName == '':
+                return
         with open(fileName, "w") as w:
             w.write("")
             for f, p in self.viewer3D.attention.items():
