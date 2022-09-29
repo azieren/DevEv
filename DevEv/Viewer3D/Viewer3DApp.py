@@ -49,7 +49,7 @@ class View3D(gl.GLViewWidget):
         self.drawn_t_item = None
         self.drawn_t_point = None
         self.drawn_h_point = None
-        self.accumulate = False
+        self.accumulate = {}
         self.line_type = 0
         self.color_code = False
         self.add_t_P = False
@@ -378,7 +378,7 @@ class View3D(gl.GLViewWidget):
             self.clear()
         else:
             if self.old_f in self.drawn_item:
-                for item in self.drawn_item[self.old_f]:
+                for _, item in self.drawn_item[self.old_f].items():
                     if isinstance(item, gl.GLMeshItem):
                         item.setColor((0.8, 0.8, 0.8, 0.15))
                     else:
@@ -393,43 +393,36 @@ class View3D(gl.GLViewWidget):
             self.sk_point.setData(pos = self.keypoints[f]["p"])
             self.sk_lines.setData(pos = self.keypoints[f]["l"])"""
 
-        if self.add_Head:
-            if self.line_type != 3: 
-                att = np.array([self.attention[f]["att"], self.attention[f]["head"]])
-                size_p = np.array([self.attention[f]["size"], 10.0])
-            else:
-                att = self.attention[f]["head"]
-                size_p = np.array([10])
-        else:
-            att = self.attention[f]["att"]
-            size_p = self.attention[f]["size"]
 
-        item = gl.GLScatterPlotItem(pos = att, color=self.base_color, size = size_p)
+        att = self.attention[f]["att"]
+        size_p = self.attention[f]["size"]
+        item_att = gl.GLScatterPlotItem(pos = att, color=self.base_color, size = np.array([size_p]))
+        self.addItem(item_att)
         
-        
-        if f not in self.drawn_item:
-            self.drawn_item[f] = [item]
-        else:
-            self.drawn_item[f].append(item)
-        self.addItem(item)
-        
-        if plot_vec:
-            if self.line_type == 0:
-                u = self.attention[f]["u"]
-                line = gl.GLLinePlotItem(pos = u, color = self.base_color, width= 2.0, antialias=True)
-            elif self.line_type == 1:
-                u = self.attention[f]["line"]
-                line = gl.GLLinePlotItem(pos = u, color = self.base_color, width= 2.0, antialias=True)
+        head = self.attention[f]["head"]
+        item_head = gl.GLScatterPlotItem(pos = head, color=self.base_color, size = np.array([10]))
 
-            else:
-                [u1, u2] = self.attention[f]["u"]
-                line = self.draw_cone(u1, u2)
-                
-            if self.line_type != 3: 
-                self.drawn_item[f].append(line)
-                self.addItem(line) 
+        if not self.add_Head:
+            item_head.hide()
+        self.addItem(item_head)
+
+        if self.line_type in [0,3]:
+            u = self.attention[f]["u"]
+            line = gl.GLLinePlotItem(pos = u, color = self.base_color, width= 2.0, antialias=True)
+        elif self.line_type == 1:
+            u = self.attention[f]["line"]
+            line = gl.GLLinePlotItem(pos = u, color = self.base_color, width= 2.0, antialias=True)
+        else:
+            [u1, u2] = self.attention[f]["u"]
+            line = self.draw_cone(u1, u2) 
+
+        if plot_vec and self.line_type == 3: 
+            line.hide()
+
+        self.addItem(line) 
         self.old_f = f
 
+        self.drawn_item[f] = {"head":item_head, "att":item_att, "vec":line}
         return
 
     def read_planes(self, filename):
@@ -534,7 +527,7 @@ class View3D(gl.GLViewWidget):
 
     def clear(self):
         for f, item_list in self.drawn_item.items(): 
-            for item in item_list: self.removeItem(item)
+            for _, item in item_list.items(): self.removeItem(item)
         self.drawn_item = {}
         return
 
@@ -561,15 +554,15 @@ class View3D(gl.GLViewWidget):
         self.color_code = state
         if state == 1:
             for f, item_list in self.drawn_item.items(): 
-                for item in item_list:
+                for _, item in item_list.items():
                     item.setData(color=self.attention[f]["c_time"])
         elif state == 2:
             for f, item_list in self.drawn_item.items(): 
-                for item in item_list:
+                for _, item in item_list.items():
                     item.setData(color=self.attention[f]["c_density"])            
         else:
             for f, item_list in self.drawn_item.items(): 
-                for item in item_list:
+                for i_, item in item_list.items():
                     item.setData(color=self.base_color)
 
         return
@@ -590,10 +583,13 @@ class View3D(gl.GLViewWidget):
         if state:
             if self.drawn_h_point is not None:
                 self.addItem(self.drawn_h_point) 
+            
         else:
             if self.drawn_h_point is not None and self.add_Head:
                 self.removeItem(self.drawn_h_point)  
-        self.add_Head= state           
+        self.add_Head = state 
+        if self.old_f in self.drawn_item:
+            self.drawn_item[self.old_f]["head"].setVisible(state)        
         return
 
     def fill_acc(self, state):
@@ -619,7 +615,7 @@ class View3D(gl.GLViewWidget):
                 p2 = u2[1]
                 d = np.linalg.norm(p1-p2)
                 if d < 0.2: continue
-                for j in range(40):
+                for j in range(20):
                     t = j/40.0
                     p = p1 * t + p2*(1-t)
                     vec = (p - p0)/ np.linalg.norm(p - p0)
@@ -643,43 +639,95 @@ class View3D(gl.GLViewWidget):
                 self.addItem(line)
         return
 
-    def modify_attention(self, frame, position, orientation):
+    def modify_attention(self, frame):
         if not frame in self.attention:
             return False
+        drawn_data = self.drawn_item[frame]
         data = self.attention[frame]
-        translation = position - data["head"]
-        data["head"] = position 
-        data["u"] = data["u"] + translation
-        data["line"] = data["line"] + translation
-
-        #orientation =  orientation/np.linalg.norm(orientation)
-        u = np.linalg.norm(data["u"][1] - data["u"][0])
-        data["u"][1] = data["u"][0] + u*orientation
-
-        att = self.collision(position, orientation)
+        data["head"] = drawn_data["head"].pos
+        u = drawn_data["att"].pos - drawn_data["head"].pos
+        u = u / np.linalg.norm(u)
+    
+        att = self.collision(drawn_data["head"].pos, u)
+        data["line"][0] = drawn_data["head"].pos
         data["line"][1] = att
         data["att"] = att
+        u = att - data["head"]
+        u = u / np.linalg.norm(u)
+        data["u"][0] = drawn_data["head"].pos
+        data["u"][1] = drawn_data["head"].pos + 5.0*u
 
-        
-        return True
+        return att
 
     def translate_attention(self, frame, dx, dy, dz):
         if not frame in self.drawn_item:
             return False
         data = self.drawn_item[frame]
-        for d in data:
-            d.translate(dx, dy, dz)
-        return
+        new_pos = data["head"].pos + np.array([dx, dy, dz])
+        data["head"].setData(pos=new_pos)
 
-    def rotate_attention(self, frame, angle, dx, dy, dz, origin):
+        u = data["att"].pos - new_pos
+        u = u / np.linalg.norm(u)
+
+        if self.line_type in [0,3]:
+            data["vec"].setData(pos=[new_pos, new_pos + 5.0*u])
+        elif self.line_type == 1:
+            data["vec"].setData(pos=[new_pos, data["att"].pos])
+
+        return u
+
+    def translate_attention_p(self, frame, dx, dy, dz):
         if not frame in self.drawn_item:
             return False
         data = self.drawn_item[frame]
-        for d in data:
-            d.translate(-origin[0], -origin[1], -origin[2])
-            d.rotate(angle, dx, dy, dz)
-            d.translate(origin[0], origin[1], origin[2])
-        return
+        d = data["att"]
+        new_pos = d.pos + np.array([dx, dy, dz])
+        d.setData(pos=new_pos)
+
+        u = new_pos - data["head"].pos
+        u = u / np.linalg.norm(u)
+
+        if self.line_type in [0,3]:
+            data["vec"].setData(pos=[data["head"].pos, data["head"].pos + 5.0*u])
+        elif self.line_type == 1:
+            data["vec"].setData(pos=[data["head"].pos, new_pos])
+
+        return u 
+
+    def rotate_attention(self, frame, angle, axis, modify_att):
+        if not frame in self.drawn_item:
+            return False
+        data = self.drawn_item[frame]
+
+        u =  data["att"].pos - data["head"].pos
+        u = rotate(u, angle*np.pi/180.0, axis)
+        if modify_att:
+            data["att"].setData(pos= data["head"].pos + u)
+        if self.line_type in [0,3]:
+            u = 5.0 * u / np.linalg.norm(u)
+            data["vec"].setData(pos=[data["head"].pos, data["head"].pos + u])
+        elif self.line_type == 1:
+            data["vec"].setData(pos=[data["head"].pos, data["att"].pos])
+        return data["att"].pos
+
+def rotate(X, theta, axis='x'):
+  '''Rotate multidimensional array `X` `theta` degrees around axis `axis`'''
+  c, s = np.cos(theta), np.sin(theta)
+  if axis == 'x': return np.dot(X, np.array([
+    [1.,  0,  0],
+    [0 ,  c, -s],
+    [0 ,  s,  c]
+  ]))
+  elif axis == 'y': return np.dot(X, np.array([
+    [c,  0,  -s],
+    [0,  1,   0],
+    [s,  0,   c]
+  ]))
+  elif axis == 'z': return np.dot(X, np.array([
+    [c, -s,  0 ],
+    [s,  c,  0 ],
+    [0,  0,  1.],
+  ]))
 
 
 

@@ -52,6 +52,7 @@ class VideoThread(QThread):
             self.cap.set(cv2.CAP_PROP_POS_FRAMES, position)
             self.curr_frame = position
             ret, cv_img = self.cap.read()
+            if not ret: return
             self.change_pixmap_signal.emit(cv_img)
             if emit_frame: self.frame_id.emit(self.curr_frame)
 

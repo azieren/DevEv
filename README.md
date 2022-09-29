@@ -8,7 +8,7 @@ pip install -r requirement.txt
 
  Alternatively
  
-pip install numpy scipy matplotlib opencv-python pyqtgraph PyQt5 PyOpenGL
+pip install numpy scipy matplotlib opencv-python-headless pyqtgraph PyQt5 PyOpenGL
 
 
 # Install
@@ -21,7 +21,7 @@ Open a python terminal by writing "python" in your command line or in a python s
 
 In the command interpreter:
 
-> Import DevEv
+> import DevEv
 > 
 > DevEv.run()
 

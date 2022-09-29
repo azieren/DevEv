@@ -26,8 +26,12 @@ class VideoWindow(QMainWindow):
 
         # Correction
         self.correctionWidget = CorrectionWindow(self.main3Dviewer)
+        self.correctionWidget.setWindowFlags(Qt.WindowStaysOnTopHint)
         self.correctionWidget.frame_id.connect(self.setPosition)
         self.correctionWidget.pose2d.connect(self.mediaPlayer.update_image_proj)
+        self.correctionWidget.open_id.connect(self.mediaPlayer.set_annotation)
+        self.correctionWidget.project3dButton.clicked.connect(self.mediaPlayer.send_annotation)
+        self.mediaPlayer.annotations_id.connect(self.correctionWidget.project3D)
 
         # Button
         self.playButton = QPushButton()
@@ -172,6 +176,27 @@ class VideoWindow(QMainWindow):
         view4Action.setStatusTip('Select a view 4')
         view4Action.triggered.connect(self.view4Select)
 
+        # Create exit action
+        view5Action = QAction(QIcon('exit.png'), '&Select View 5', self)        
+        #viewAction.setShortcut('Ctrl+R')
+        view5Action.setStatusTip('Select a view 5')
+        view5Action.triggered.connect(self.view5Select)
+
+        view6Action = QAction(QIcon('exit.png'), '&Select View 6', self)        
+        #viewAction.setShortcut('Ctrl+R')
+        view6Action.setStatusTip('Select a view 6')
+        view6Action.triggered.connect(self.view6Select)
+
+        view7Action = QAction(QIcon('exit.png'), '&Select View 7', self)        
+        #viewAction.setShortcut('Ctrl+R')
+        view7Action.setStatusTip('Select a view 7')
+        view7Action.triggered.connect(self.view7Select)
+
+        view8Action = QAction(QIcon('exit.png'), '&Select View 8', self)        
+        #viewAction.setShortcut('Ctrl+R')
+        view8Action.setStatusTip('Select a view 8')
+        view8Action.triggered.connect(self.view8Select)
+
         correctAction = QAction(QIcon('exit.png'), '&Open correction tool', self)        
         #viewAction.setShortcut('Ctrl+R')
         correctAction.setStatusTip('Correction Tool')
@@ -183,8 +208,9 @@ class VideoWindow(QMainWindow):
         #fileMenu.addAction(newAction)
         fileMenu.addAction(openAction)
         fileMenu.addAction(openAtt)
-        fileMenu.addAction(exitAction)
         fileMenu.addAction(resetAction)
+        fileMenu.addAction(exitAction)
+        
 
         viewMenu = menuBar.addMenu('&View')
         viewMenu.addAction(view0Action)
@@ -192,6 +218,10 @@ class VideoWindow(QMainWindow):
         viewMenu.addAction(view2Action)
         viewMenu.addAction(view3Action)
         viewMenu.addAction(view4Action)
+        viewMenu.addAction(view5Action)
+        viewMenu.addAction(view6Action)
+        viewMenu.addAction(view7Action)
+        viewMenu.addAction(view8Action)
 
         correctMenu = menuBar.addMenu('&Correction')
         correctMenu.addAction(correctAction)
@@ -239,16 +269,16 @@ class VideoWindow(QMainWindow):
         view3Dwid = QWidget()
         view3Dwid.setLayout(view3DLayout)
 
-        splitter = QSplitter(Qt.Horizontal, frameShape=QFrame.StyledPanel,frameShadow=QFrame.Plain)
-        splitter.setStyleSheet("QSplitter::handle{background: #444444;}") 
-        splitter.addWidget(self.mediaPlayer)
-        splitter.addWidget(view3Dwid)
+        #splitter = QSplitter(Qt.Horizontal, frameShape=QFrame.StyledPanel,frameShadow=QFrame.Plain)
+        #splitter.setStyleSheet("QSplitter::handle{background: #444444;}") 
+        #splitter.addWidget(self.mediaPlayer)
+        #splitter.addWidget(view3Dwid)
         #splitter.setCollapsible(0, False)
         #splitter.setCollapsible(1, False)
         #splitter.setStretchFactor(0,0)
 
         mainlayout = QVBoxLayout()
-        mainlayout.addWidget(splitter)
+        mainlayout.addWidget(view3Dwid)
         mainlayout.addLayout(controlLayout)
 
         # Set widget to contain window contents
@@ -259,8 +289,10 @@ class VideoWindow(QMainWindow):
 
         if video_file is not None:
             self.setFile(video_file)
+            
         if att_file is not None:
             self.main3Dviewer.attention = self.main3Dviewer.read_attention(att_file)
+            
 
     def setFile(self, filename):
         self.mediaPlayer.set_file(filename)
@@ -275,6 +307,8 @@ class VideoWindow(QMainWindow):
                 QDir.homePath())
         if fileName != '':
             self.setFile(fileName)
+            if not self.mediaPlayer.isVisible():
+                self.mediaPlayer.show()
 
     def openFileAtt(self):
         fileName, _ = QFileDialog.getOpenFileName(self, "Open Attention",
@@ -308,19 +342,41 @@ class VideoWindow(QMainWindow):
             self.mediaPlayer.stop_video()
         self.mediaPlayer.view = 4
 
+    def view5Select(self):
+        if self.mediaPlayer.thread._run_flag:
+            self.mediaPlayer.stop_video()
+        self.mediaPlayer.view = 5
+
+    def view6Select(self):
+        if self.mediaPlayer.thread._run_flag:
+            self.mediaPlayer.stop_video()
+        self.mediaPlayer.view = 6
+
+    def view7Select(self):
+        if self.mediaPlayer.thread._run_flag:
+            self.mediaPlayer.stop_video()
+        self.mediaPlayer.view = 7
+
+    def view8Select(self):
+        if self.mediaPlayer.thread._run_flag:
+            self.mediaPlayer.stop_video()
+        self.mediaPlayer.view = 8
+
     def correctSelect(self):
         if self.mediaPlayer.thread._run_flag:
             self.mediaPlayer.stop_video()
         self.correctionWidget.show()
+        self.correctionWidget.raise_()
         self.correctionWidget.update_frame()
+        self.mediaPlayer.set_annotation(True)
 
     def exitCall(self):
-        self.mediaPlayer.close()
         self.close()
 
-    def exitCall(self):
+    def closeEvent(self, event):
         self.mediaPlayer.close()
-        self.close()
+        self.correctionWidget.close()
+        event.accept()
 
     def reset3D(self):
         self.main3Dviewer.reset()
@@ -457,7 +513,7 @@ def run(video_file=None, att_file=None):
     """ 
     app = QApplication(sys.argv)
     player = VideoWindow(video_file=video_file, att_file=att_file)
-    player.resize(640+520 , 480)
+    player.resize(640+520 , 680)
     player.show()
     sys.exit(app.exec_())
 
