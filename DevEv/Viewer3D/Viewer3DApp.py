@@ -82,7 +82,8 @@ class View3D(gl.GLViewWidget):
     def collision(self, P, U):
         attention, valids = plane_intersect_batch(P, U, self.plane_list[:, 0], self.plane_normals)   
         
-        if valids is None: return None
+        if valids is None: 
+            return None
         S1_v, l1_v = self.plane_s1[valids], self.plane_l1[valids]
         S2_v, l2_v = self.plane_s2[valids], self.plane_l2[valids]
         V = attention - self.plane_list[valids, 0]

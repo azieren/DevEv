@@ -526,25 +526,27 @@ class CorrectionWindow(QWidget):
         return
 
     def propagate(self):
-        x_tr, frame_list = [], []
-        for f, p in self.viewer3D.attention.items():
+        x_tr, frame_list, corrected_list = [], [], []
+        for i, (f, p) in enumerate(self.viewer3D.attention.items()):
             p, v = p["u"][0], p["u"][1]-p["u"][0]
             v = v/np.linalg.norm(v)
             info = np.concatenate([p, v], axis=0)
             x_tr.append(info)
             frame_list.append(f)
+            if f in self.corrected_list:
+                corrected_list.append(i)
         x_tr = np.array(x_tr)
 
-        if len(self.corrected_list) == 0: return x_tr
+        if len(self.corrected_list) == 0: return x_tr, frame_list
 
-        mask = build_mask(self.corrected_list, len(x_tr))[:, np.newaxis]
+        mask = build_mask(corrected_list, len(x_tr))[:, np.newaxis]
         #plt.plot(mask[:100])
         #plt.show()
-        if 0 not in self.corrected_list: self.corrected_list = [0] + self.corrected_list
-        if len(x_tr)-1 not in self.corrected_list: self.corrected_list = self.corrected_list + [len(x_tr)-1]
-        correction = x_tr[self.corrected_list]
+        if 0 not in corrected_list: corrected_list = [0] + corrected_list
+        if len(x_tr)-1 not in corrected_list: corrected_list = corrected_list + [len(x_tr)-1]
+        correction = x_tr[corrected_list]
 
-        f = interpolate.interp1d(self.corrected_list, correction, axis=0)
+        f = interpolate.interp1d(corrected_list, correction, axis=0)
         x_interp = f(np.arange(0, len(x_tr), 1))
         #plt.plot(x_tr[:,0], "-r")
         x_tr = (1-mask)*x_tr + mask * x_interp
@@ -558,23 +560,28 @@ class CorrectionWindow(QWidget):
             v = x_tr[i, 3:]
             v = v/np.linalg.norm(v)
             att = self.viewer3D.collision(pos, v)
+            if att is None or v is None or pos is None:
+                continue
             p["head"] = pos
             p["u"][0], p["line"][0] = pos, pos
             p["u"][0] = pos + v
             p["line"][1] = att
             p["att"] = att
-        return x_tr
+        return x_tr, frame_list
 
     def runGP(self):
 
-        x_tr = self.propagate()
+        x_tr, frame_list = self.propagate()
         self.write_attention("temp.txt")
         N = len(self.viewer3D.attention) // 1800
-        self.frame_list = sorted(get_uncertainty(x_tr, max_n= N * 30))
+        uncertain_frames = get_uncertainty(x_tr, max_n= N * 10)
+        self.frame_list = sorted([frame_list[f] for f in uncertain_frames])
         print(self.frame_list)
+        print("{} Frames proposed to correct".format(len(self.frame_list)))
         if len(self.frame_list) == 0:
             self.curr_indice = -1
             self.frame_listW.clear()
+            self.corrected_list = []
             return
 
         self.curr_indice = 0

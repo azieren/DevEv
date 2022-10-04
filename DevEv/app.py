@@ -296,6 +296,8 @@ class VideoWindow(QMainWindow):
 
     def setFile(self, filename):
         self.mediaPlayer.set_file(filename)
+        if self.correctionWidget.isVisible():
+            self.mediaPlayer.stop_video()
         self.playButton.setEnabled(True)
         self.positionSlider.setRange(0, self.mediaPlayer.duration)
         self.minInt.setTop(self.mediaPlayer.duration - 10)
