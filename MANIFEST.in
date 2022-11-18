@@ -1,0 +1,13 @@
+include INSTALL
+include LICENSE
+include MANIFEST.in
+global-include *.npy
+global-include *.png
+global-include *.jpg
+global-include *.txt
+global-include *.json
+global-include *.ply
+global-include *.mtl
+global-include *.obj
+global-exclude __pycache__
+global-exclude *.py[co]
