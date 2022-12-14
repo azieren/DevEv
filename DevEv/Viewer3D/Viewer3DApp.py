@@ -6,11 +6,16 @@ import numpy as np
 import os
 import cv2
 
+from OpenGL.GL import *
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
+from PyQt5.QtGui import QVector3D, QQuaternion
+
 from matplotlib import cm
 from scipy.spatial import ConvexHull
 from scipy import stats
-
+import trimesh
 from .objects import get_balloon, get_red_ball, get_shovel, get_farm, get_xyl, get_tree, get_ring, get_piggy, get_red_toy
+from .TexturedMesh import OBJ, GLMeshTexturedItem, MTL
 
 SKELETON = [
     [1,3],[1,0],[2,4],[2,0],[0,5],[0,6],[5,7],[7,9],[6,8],[8,10],[5,11],[6,12],[11,12],[11,13],[13,15],[12,14],[14,16]
@@ -36,11 +41,16 @@ def plane_intersect_batch(p0, u, p_co = np.array([0,0,0]), p_no= np.array([0,0,1
     valids[ind] = False
     return p, valids
 
+
 class View3D(gl.GLViewWidget):
+    position_sig = pyqtSignal(np.ndarray)
+    direction_sig = pyqtSignal(np.ndarray)
+    attention_sig = pyqtSignal(np.ndarray)
+
     def __init__(self):
         super(View3D, self).__init__()    
         self.base_color = (1.0,0.0,0.0,1.0)
-        self.base_color_t = (0.8,0.8,0.8,0.2)   
+        self.base_color_t = (0.8,0.8,0.8,1.0)   
         ## create three grids, add each to the view   
         xgrid = gl.GLGridItem()
         xgrid.setSize(x=50, y=40)
@@ -57,183 +67,177 @@ class View3D(gl.GLViewWidget):
         self.old_f = None
         self.fill = None
         self.add_Head = True
+        self.click_enable = False
 
-        plane_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/room_setup2.json')
-        self.plane_dict = self.read_planes(plane_file)
+        #plane_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/room_setup2.json')
+        #self.plane_dict = self.read_planes(plane_file)
+        room_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/LAB.ply')
+        self.mesh = self.read_room(room_file)
         att_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/attention.txt')
         self.attention = self.read_attention(att_file)
         #self.keypoints = self.read_keypoints("data_3d_DevEv_S_12_01_MobileInfants_trim.npy")
-        self.draw_planes()
-        self.draw_point()  
-
-        S1_n, S2_n = self.plane_list[:, 1] - self.plane_list[:, 0], self.plane_list[:, 3] - self.plane_list[:, 0]
-        self.plane_l1, self.plane_l2 = np.linalg.norm(S1_n, axis = 1), np.linalg.norm(S2_n, axis = 1)
-        self.plane_s1, self.plane_s2 = S1_n / self.plane_l1[:, np.newaxis], S2_n / self.plane_l2[:, np.newaxis]
-        normals = np.cross(self.plane_s1, self.plane_s2)
-        self.plane_normals = normals / np.linalg.norm(normals, axis = 1)[:, np.newaxis] 
-
         #self.draw_skeleton()
+        return
+
+    
+    def mouseMoveEvent(self, ev):
+        lpos = ev.position() if hasattr(ev, 'position') else ev.localPos()
+        old_pos = self.mousePos
+        diff = lpos - self.mousePos
+        self.mousePos = lpos
+        
+        if ev.buttons() == Qt.MouseButton.LeftButton:
+            if (ev.modifiers() & Qt.KeyboardModifier.ControlModifier):
+                self.pan(diff.x(), diff.y(), 0, relative='view')
+            else:
+                self.orbit(-diff.x(), diff.y())
+        elif ev.buttons() == Qt.MouseButton.MiddleButton:
+            if (ev.modifiers() & Qt.KeyboardModifier.ControlModifier):
+                self.pan(diff.x(), 0, diff.y(), relative='view-upright')
+            else:
+                self.pan(diff.x(), diff.y(), 0, relative='view-upright')
+        elif ev.buttons() == Qt.MouseButton.RightButton and self.click_enable:
+            self.modify_attention_click([diff.x(), diff.y()], ev.modifiers() & Qt.KeyboardModifier.ControlModifier)
+            
+
+    def modify_attention_click(self, diff, translate):  
+        R = self.viewMatrix()   
+        if translate:
+            scale_factor = self.pixelSize(self.opts['center'] )
+            translation = scale_factor*R.transposed().mapVector(QVector3D(diff[0], -diff[1], 0.0))
+            self.translate_attention(self.old_f, translation[0], translation[1], 0, emit = True)
+        else:
+            q = QQuaternion.fromAxisAndAngle(R[2,0], R[2,1], R[2,2], -diff[0])
+            q *= QQuaternion.fromAxisAndAngle(R[0,0], R[0,1], R[0,2], -diff[1])
+            self.rotate_attention_signal(self.old_f, q, True)
+        return
+
+    @pyqtSlot(bool)
+    def set_annotation(self, state):
+        self.click_enable = state
+        return
+
+    def read_room(self, file):
+        option_gl = {
+        GL_LIGHTING:True,
+        GL_LIGHT0:True,
+        GL_LIGHT1:True,
+        GL_DEPTH_TEST: True,
+        GL_BLEND: True,
+        GL_ALPHA_TEST: False,
+        GL_CULL_FACE: False,
+        GL_POLYGON_SMOOTH:True,
+
+        'glBlendFunc': (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA),
+        GL_COLOR_MATERIAL: True,
+        'glColorMaterial' : (GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE),
+
+        'glMaterialfv':( GL_FRONT_AND_BACK, GL_AMBIENT, (1.0, 1.0, 1.0, 1.0) ),
+        'glMaterialfv':( GL_FRONT_AND_BACK, GL_DIFFUSE, (0.9, 0.9, 0.9, 1.0) ),
+        'glMaterialfv':( GL_FRONT_AND_BACK, GL_SPECULAR, (0.17, 0.17, 0.17, 1) ),
+        'glMaterialf':( GL_FRONT_AND_BACK, GL_SHININESS, 1.45),
+
+        'glLight' : (GL_LIGHT0, GL_POSITION,  (-7, -7, 12, 1.0)), # point light from the left, top, front
+        'glLightfv' : (GL_LIGHT0, GL_AMBIENT, (0.5, 0.5, 0.5, 1.0)),
+        'glLightfv': (GL_LIGHT0, GL_DIFFUSE, (1, 1, 1, 1)),
+        'glLightfv': (GL_LIGHT0, GL_SPECULAR, (0.5, 0.5, 0.5, 1)),
+
+        'glLight' : (GL_LIGHT1, GL_POSITION,  (7, 10, 12, 1.0)), # point light from the left, top, front
+        'glLightfv' : (GL_LIGHT1, GL_AMBIENT, (0.5, 0.5, 0.5, 1.0)),
+        'glLightfv': (GL_LIGHT1, GL_DIFFUSE, (1, 1, 1, 1.0)),
+        'glLightfv': (GL_LIGHT1, GL_SPECULAR, (0.5, 0.5, 0.5, 1)),
+            }  
+
+        mesh = trimesh.load_mesh(file)
+
+        mat_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/scene/LAB.obj')
+        mtl_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/scene/LAB.mtl')
+        obj = OBJ(mat_file, swapyz=True)
+        self.mtl_data = MTL(filename=mtl_file)
+        self.addItem(self.mtl_data)
+
+        vertices = []
+        faces = []
+        colors = []
+        self.room_textured = []
+        count = 0
+        for name, ob in obj.content.items():
+            if "material" not in ob: continue
+                #print(name, np.array(ob["vertexes"]).shape)
+                #exit()
+            mtl = self.mtl_data.contents[ob["material"]]
+            vert = np.array(ob["vertexes"]).reshape(-1, 3)
+            face = np.array(ob["faces"]).reshape(-1, 3)
+            color = np.array([mtl["Kd"][0], mtl["Kd"][1],mtl["Kd"][2], 1.0])
+            
+            if color[0] > 0.8 and color[1] > 0.8 and color[2] > 0.8:
+                color = np.array([0.65, 0.65, 0.65, 1.0])
+
+            if 'map_Kd' in  mtl:
+                #if "Carpet3.png" in mtl["map_Kd"] or "SquareMat2.png" in mtl["map_Kd"]:
+                texture = {"coords":np.array(ob["textures"]).reshape(-1, 2) , "name":ob["material"], "mtl":self.mtl_data.contents}
+                mesh_data = gl.MeshData(vertexes=vert, faces=face)
+                element = GLMeshTexturedItem(meshdata=mesh_data, textures = texture, smooth=True, drawEdges=False, glOptions=option_gl)
+                self.room_textured.append(element)
+                self.addItem(element)
+                continue
+            #print(name, ob["material"], count, face[-1][-1])
+            color = np.repeat(color[None,:], vert.shape[0], axis = 0)
+            vertices.append(vert)
+            colors.append(color)
+            faces.append(face + count)
+            count += face[-1][-1] + 1
+            
+        vertices = np.concatenate(vertices, axis = 0)
+        faces = np.concatenate(faces, axis = 0)
+        colors = np.concatenate(colors, axis = 0)     
+        print(vertices.shape, colors.shape)  
+        mesh_data = gl.MeshData(vertexes=vertices, faces=faces, vertexColors=colors)
+
+        self.room = gl.GLMeshItem(meshdata=mesh_data, smooth=True, drawEdges=False, glOptions=option_gl)
+        self.addItem(self.room)
+        
+
+        """#print(obj.faces)
+        vert = np.array(obj.vertexes).reshape(-1, 3)
+        face = np.array(obj.face_ind).reshape(-1, 3)
+        texture = np.array(obj.textures).reshape(-1, 2)
+
+        print(vert.shape, face.shape, texture.shape, obj.mtl)
+        mesh_data = gl.MeshData(vertexes=vert, faces=face)
+        textures = {"coords":texture, "mtl":obj.mtl}
+        #self.room = gl.GLMeshItem(meshdata=mesh_data, smooth=True, drawEdges=False, glOptions='translucent')
+        self.room = GLMeshTexturedItem(meshdata=mesh_data, textures = textures, smooth=True, drawEdges=False, glOptions='translucent')
+        self.addItem(self.room)"""
+        return mesh
 
 
     def accumulate3D(self, state):
+        self.clear()
         self.accumulate = state
         return
 
     def collision(self, P, U):
-        attention, valids = plane_intersect_batch(P, U, self.plane_list[:, 0], self.plane_normals)   
-        
-        if valids is None: 
-            return None
-        S1_v, l1_v = self.plane_s1[valids], self.plane_l1[valids]
-        S2_v, l2_v = self.plane_s2[valids], self.plane_l2[valids]
-        V = attention - self.plane_list[valids, 0]
-        V_n = np.linalg.norm(V, axis = 1)
 
-        x_n = (V*S1_v).sum(1)
-        y_n = (V*S2_v).sum(1)
+        ray_origins = P.reshape(-1, 3)
+        ray_directions = U.reshape(-1, 3)
 
-        valids_att =  0 <= x_n 
-        valids_att[x_n - l1_v >= 0] = False
-        valids_att[y_n < 0] = False
-        valids_att[y_n - l2_v >= 0] = False
+        # Get the intersections
+        intersection, index_ray, index_tri = self.mesh.ray.intersects_location(
+        ray_origins=ray_origins, ray_directions=ray_directions)
 
-        if valids_att.sum() >= 1: 
-            attention = attention[valids_att]
-            closest = np.argmin(V_n[valids_att])
-            return attention[closest]    
+        if len(intersection) > 0:
+            d = np.sqrt(np.sum((P - intersection) ** 2, axis=1))
+            ind = np.argsort(d)
+            return intersection[ind[0]]
+
         return None
 
-    def draw_planes(self):
-        self.planes = {}
-        self.room_line = None
-        
-        faces = np.array([[0,1,2], [0,2,3]])
-        line_list = []
-        ceiling_points = self.plane_dict["ceiling"][0]
-        count = 0
-
-        self.plane_list = []
-        for name, planes in self.plane_dict.items():
-            self.plane_list.extend(planes)
-            if name == "ceiling" or name == "floor" or name == "room": continue
-            c = None
-            if name in ["board", "bench", "walls"]: c = (1.0, 1.0, 1.0, 0.4)
-            elif "blue" in name: c = (0.0, 0.0, 0.9, 0.4)
-            elif name == "box1": c = (1.0, 1.0, 0.0, 0.4)
-            elif "cab" in name: c = (158/255.0, 123/255.0, 33/255.0, 0.4)
-            elif "croco" in name: c = (0.0, 1.0, 0.0, 0.6)
-            for p in planes:
-                d = gl.MeshData(vertexes=p, faces=faces)
-                if c is None:
-                    plane = gl.GLMeshItem(meshdata=d, color = (1,1,1,0.4), shader='viewNormalColor', glOptions='translucent')
-                else:
-                    plane = gl.GLMeshItem(meshdata=d, color = c, glOptions='translucent')
-                self.planes[count] = plane
-                count += 1
-                self.addItem(plane)
-                for j in range(3):                       
-                    line_list.append(p[j])     
-                    line_list.append(p[j+1])      
-                line_list.append(p[-1])     
-                line_list.append(p[0])   
-            
-        line_list = np.array(line_list)
-        l = gl.GLLinePlotItem(pos = np.array(line_list), color = (1.0, 1.0, 1.0, 0.7), width= 2.5, glOptions='translucent', mode="lines")
-        self.room_line = l
-        self.addItem(l)
-
-        # Add Florr
-        scale = 30
-        p = np.array([[-scale, -scale, 0.0],[-scale, scale, 0.0],[scale, scale, 0.0],[scale, -scale, 0.0]])
-        d = gl.MeshData(vertexes=p, faces=faces)
-        plane = gl.GLMeshItem(meshdata=d, color = (0.1,0.0,0.0,0.4), glOptions='translucent')
-        self.planes[count] = plane
-        count += 1
-        self.addItem(plane)
-
-        att_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/ceiling_reconstructed.png')
-        img = cv2.imread(att_file)
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        d = pg.makeRGBA(img)[0]#gl.MeshData(vertexes=ceiling_points, faces=faces)
-        d[:,:,3] = 100
-        plane = gl.GLImageItem(d, smooth=True, glOptions='translucent')
-        d1 = np.linalg.norm(ceiling_points[1] - ceiling_points[2])
-        d2 = np.linalg.norm(ceiling_points[0] - ceiling_points[1])
-        plane.scale(d1/d.shape[0], d2/d.shape[1], 1.0)
-        plane.rotate(90, 0, 0, 1)
-        plane.translate(ceiling_points[0][0], ceiling_points[0][1], ceiling_points[0][2])
-        self.planes[count] = plane
-        self.addItem(plane)
-        self.draw_toys() 
-        self.plane_list = np.array(self.plane_list)
-
-    def draw_toys(self):
-        balloon = get_balloon()
-        self.addItem(balloon)
-
-        red_ball = get_red_ball()
-        self.addItem(red_ball)
-
-        shovel = get_shovel()
-        self.addItem(shovel)
-
-        farm = get_farm()
-        self.addItem(farm)
-
-        xyl = get_xyl()
-        self.addItem(xyl)
-
-        treetoy = get_tree()
-        self.addItem(treetoy)
-
-        ring = get_ring()
-        self.addItem(ring)
-
-        piggy = get_piggy()
-        self.addItem(piggy)
-
-        red_toy = get_red_toy()
-        self.addItem(red_toy)
-
-        #crawl = np.load("crawl.npy", allow_pickle=True).item()
-        #d = gl.MeshData(vertexes=crawl["vertexes"], faces=crawl["faces"])     
-        #mesh = gl.GLMeshItem(meshdata=d, glOptions='translucent', color=self.base_color_t)   
-        #mesh.translate(-3,0,1)
-        #self.addItem(mesh)
-
-        self.toys = {"balloon": balloon, "red_ball":red_ball, "shovel":shovel, "piggy":piggy, "red_toy":red_toy,
-                    "farm":farm, "xyl":xyl, "treetoy":treetoy, "ring":ring}
-        return
-
-    def clear_scene(self):       
-        for i, p in self.planes.items():
-            self.removeItem(p)
-        self.removeItem(self.room_line)
-
-        for _, item in self.toys.items():
-            self.removeItem(item)
-
-        self.planes = {}
-        self.room_line = None
-        self.toys = {}
-        return
-
     def clearRoom(self, state):
-        if state:
-            self.clear_scene()
-        else:
-            self.draw_planes()
+        self.room.setVisible(not state)
+        for obj in self.room_textured:
+            obj.setVisible(not state)
         return
-
-    def draw_point(self):
-        p = []
-        for i in range(0, 9):
-            for j in range(0, 9):
-                p.append([i,j, 0.0])
-        p = np.array(p)
-        point = gl.GLScatterPlotItem()
-        point.setData(pos = p, color=(1.0,1.0,1.0,0.5), size = 4.0)
-        self.addItem(point)
 
     def draw_cone(self, p0, p1, L = 8.0, n=8, R= 1.5):
         # vector in direction of axis
@@ -349,6 +353,9 @@ class View3D(gl.GLViewWidget):
 
             att_line = np.array([b, pos])
             size = np.linalg.norm(pos - b)
+            if size < 1e-6: 
+                attention[int(frame)] = attention[int(frame) - 1]
+                continue
             vec = (pos - b)/ ( size + 1e-6)
             att_vec = np.array([b, b + 5.0*vec]) 
             attention[int(frame)] = {"u":att_vec, "line":att_line, "head":b, "att":pos,
@@ -379,11 +386,13 @@ class View3D(gl.GLViewWidget):
             self.clear()
         else:
             if self.old_f in self.drawn_item:
-                for _, item in self.drawn_item[self.old_f].items():
+                c = (0.7, 0.7, 0.7, 0.35)
+                for n, item in self.drawn_item[self.old_f].items(): 
                     if isinstance(item, gl.GLMeshItem):
-                        item.setColor((0.8, 0.8, 0.8, 0.15))
+                        item.setColor(c)
                     else:
-                        item.setData(color = (0.8, 0.8, 0.8, 0.15))
+                        item.setData(color = c)
+                    item.setGLOptions('translucent')
                         
                         
 
@@ -401,7 +410,7 @@ class View3D(gl.GLViewWidget):
         self.addItem(item_att)
         
         head = self.attention[f]["head"]
-        item_head = gl.GLScatterPlotItem(pos = head, color=self.base_color, size = np.array([10]))
+        item_head = gl.GLScatterPlotItem(pos = head, color=self.base_color, size = np.array([20]), glOptions = 'translucent')
 
         if not self.add_Head:
             item_head.hide()
@@ -409,29 +418,25 @@ class View3D(gl.GLViewWidget):
 
         if self.line_type in [0,3]:
             u = self.attention[f]["u"]
-            line = gl.GLLinePlotItem(pos = u, color = self.base_color, width= 2.0, antialias=True)
+            line = gl.GLLinePlotItem(pos = u, color = self.base_color, width= 2.0, antialias=True, glOptions = 'translucent')
         elif self.line_type == 1:
             u = self.attention[f]["line"]
-            line = gl.GLLinePlotItem(pos = u, color = self.base_color, width= 2.0, antialias=True)
+            line = gl.GLLinePlotItem(pos = u, color = self.base_color, width= 2.0, antialias=True, glOptions = 'translucent')
         else:
             [u1, u2] = self.attention[f]["u"]
             line = self.draw_cone(u1, u2) 
 
         if plot_vec and self.line_type == 3: 
             line.hide()
+            item_att.hide()
 
         self.addItem(line) 
-        self.old_f = f
+        
 
         self.drawn_item[f] = {"head":item_head, "att":item_att, "vec":line}
+        self.old_f = f
         return
 
-    def read_planes(self, filename):
-        #with open(filename, 'r') as f:
-        #plane_list = json.load(f)
-        plane_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/room_setup_obj.npy')
-        plane_list = np.load(plane_file, allow_pickle=True)
-        return plane_list.item()
 
     def showAll(self, frame_min, frame_max, as_type):
         self.clear_t()
@@ -660,7 +665,7 @@ class View3D(gl.GLViewWidget):
 
         return att
 
-    def translate_attention(self, frame, dx, dy, dz):
+    def translate_attention(self, frame, dx, dy, dz, emit=False):
         if not frame in self.drawn_item:
             return False
         data = self.drawn_item[frame]
@@ -674,6 +679,11 @@ class View3D(gl.GLViewWidget):
             data["vec"].setData(pos=[new_pos, new_pos + 5.0*u])
         elif self.line_type == 1:
             data["vec"].setData(pos=[new_pos, data["att"].pos])
+
+        if emit:
+            self.position_sig.emit(new_pos)
+            self.direction_sig.emit(u)
+            return
 
         return u
 
@@ -692,7 +702,6 @@ class View3D(gl.GLViewWidget):
             data["vec"].setData(pos=[data["head"].pos, data["head"].pos + 5.0*u])
         elif self.line_type == 1:
             data["vec"].setData(pos=[data["head"].pos, new_pos])
-
         return u 
 
     def rotate_attention(self, frame, angle, axis, modify_att):
@@ -710,6 +719,26 @@ class View3D(gl.GLViewWidget):
         elif self.line_type == 1:
             data["vec"].setData(pos=[data["head"].pos, data["att"].pos])
         return data["att"].pos
+
+    def rotate_attention_signal(self, frame, M, modify_att):
+        if not frame in self.drawn_item:
+            return False
+        data = self.drawn_item[frame]
+
+        u =  data["att"].pos - data["head"].pos
+        u = M.rotatedVector(QVector3D(u[0], u[1], u[2]))
+        u = np.array([u[0], u[1], u[2]])
+        if modify_att:
+            data["att"].setData(pos= data["head"].pos + u)
+        if self.line_type in [0,3]:
+            u = 5.0 * u / np.linalg.norm(u)
+            data["vec"].setData(pos=[data["head"].pos, data["head"].pos + u])
+        elif self.line_type == 1:
+            data["vec"].setData(pos=[data["head"].pos, data["att"].pos])
+        
+        self.attention_sig.emit(data["att"].pos)
+        self.direction_sig.emit(u)
+        return 
 
 def rotate(X, theta, axis='x'):
   '''Rotate multidimensional array `X` `theta` degrees around axis `axis`'''

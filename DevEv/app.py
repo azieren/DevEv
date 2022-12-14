@@ -30,6 +30,7 @@ class VideoWindow(QMainWindow):
         self.correctionWidget.frame_id.connect(self.setPosition)
         self.correctionWidget.pose2d.connect(self.mediaPlayer.update_image_proj)
         self.correctionWidget.open_id.connect(self.mediaPlayer.set_annotation)
+        self.correctionWidget.open_id.connect(self.main3Dviewer.set_annotation)
         self.correctionWidget.project3dButton.clicked.connect(self.mediaPlayer.send_annotation)
         self.mediaPlayer.annotations_id.connect(self.correctionWidget.project3D)
 
@@ -38,6 +39,17 @@ class VideoWindow(QMainWindow):
         self.playButton.setEnabled(False)
         self.playButton.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
         self.playButton.clicked.connect(self.play)
+
+        self.playBackButton = QPushButton()
+        self.playBackButton.setEnabled(False)
+        self.playBackButton.setIcon(self.style().standardIcon(QStyle.SP_MediaSkipBackward))
+        self.playBackButton.clicked.connect(self.playback)
+
+        self.playFrontButton = QPushButton()
+        self.playFrontButton.setEnabled(False)
+        self.playFrontButton.setIcon(self.style().standardIcon(QStyle.SP_MediaSkipForward))
+        self.playFrontButton.clicked.connect(self.playfront)
+
 
         self.positionSlider = QSlider(Qt.Horizontal)
         self.positionSlider.setRange(0, 0)
@@ -149,56 +161,20 @@ class VideoWindow(QMainWindow):
         resetAction.setStatusTip('Reset 3D View')
         resetAction.triggered.connect(self.reset3D)
 
-        # Create exit action
-        view0Action = QAction(QIcon('exit.png'), '&Select All Views', self)        
-        #viewAction.setShortcut('Ctrl+R')
-        view0Action.setStatusTip('Select all views')
-        view0Action.triggered.connect(self.view0Select)
-
-        # Create exit action
-        view1Action = QAction(QIcon('exit.png'), '&Select View 1', self)        
-        #viewAction.setShortcut('Ctrl+R')
-        view1Action.setStatusTip('Select a view 1')
-        view1Action.triggered.connect(self.view1Select)
-
-        view2Action = QAction(QIcon('exit.png'), '&Select View 2', self)        
-        #viewAction.setShortcut('Ctrl+R')
-        view2Action.setStatusTip('Select a view 2')
-        view2Action.triggered.connect(self.view2Select)
-
-        view3Action = QAction(QIcon('exit.png'), '&Select View 3', self)        
-        #viewAction.setShortcut('Ctrl+R')
-        view3Action.setStatusTip('Select a view 3')
-        view3Action.triggered.connect(self.view3Select)
-
-        view4Action = QAction(QIcon('exit.png'), '&Select View 4', self)        
-        #viewAction.setShortcut('Ctrl+R')
-        view4Action.setStatusTip('Select a view 4')
-        view4Action.triggered.connect(self.view4Select)
-
-        # Create exit action
-        view5Action = QAction(QIcon('exit.png'), '&Select View 5', self)        
-        #viewAction.setShortcut('Ctrl+R')
-        view5Action.setStatusTip('Select a view 5')
-        view5Action.triggered.connect(self.view5Select)
-
-        view6Action = QAction(QIcon('exit.png'), '&Select View 6', self)        
-        #viewAction.setShortcut('Ctrl+R')
-        view6Action.setStatusTip('Select a view 6')
-        view6Action.triggered.connect(self.view6Select)
-
-        view7Action = QAction(QIcon('exit.png'), '&Select View 7', self)        
-        #viewAction.setShortcut('Ctrl+R')
-        view7Action.setStatusTip('Select a view 7')
-        view7Action.triggered.connect(self.view7Select)
-
-        view8Action = QAction(QIcon('exit.png'), '&Select View 8', self)        
-        #viewAction.setShortcut('Ctrl+R')
-        view8Action.setStatusTip('Select a view 8')
-        view8Action.triggered.connect(self.view8Select)
+        self.viewAction, self.curr_views = [], [0]
+        for i in range(9):
+            # Create exit action
+            action = QAction('&Select View '+str(i), self, checkable=True)        
+            action.setShortcut(str(i))
+            if i == 0: action.setChecked(True)
+            else: action.setChecked(False)
+            action.setStatusTip('Select view '+str(i))
+            action.setData(i)
+            action.triggered.connect(self.viewSelect)
+            self.viewAction.append(action)
 
         correctAction = QAction(QIcon('exit.png'), '&Open correction tool', self)        
-        #viewAction.setShortcut('Ctrl+R')
+        correctAction.setShortcut('Ctrl+C')
         correctAction.setStatusTip('Correction Tool')
         correctAction.triggered.connect(self.correctSelect)
 
@@ -209,19 +185,15 @@ class VideoWindow(QMainWindow):
         fileMenu.addAction(openAction)
         fileMenu.addAction(openAtt)
         fileMenu.addAction(resetAction)
+        fileMenu.addSeparator()
         fileMenu.addAction(exitAction)
         
 
         viewMenu = menuBar.addMenu('&View')
-        viewMenu.addAction(view0Action)
-        viewMenu.addAction(view1Action)
-        viewMenu.addAction(view2Action)
-        viewMenu.addAction(view3Action)
-        viewMenu.addAction(view4Action)
-        viewMenu.addAction(view5Action)
-        viewMenu.addAction(view6Action)
-        viewMenu.addAction(view7Action)
-        viewMenu.addAction(view8Action)
+        for i in range(9):
+            viewMenu.addAction(self.viewAction[i])
+            if i == 0:
+                viewMenu.addSeparator()
 
         correctMenu = menuBar.addMenu('&Correction')
         correctMenu.addAction(correctAction)
@@ -240,7 +212,9 @@ class VideoWindow(QMainWindow):
         # Create layouts to place inside widget
         controlLayout = QHBoxLayout()
         controlLayout.setContentsMargins(0, 0, 0, 0)
+        controlLayout.addWidget(self.playBackButton)
         controlLayout.addWidget(self.playButton)
+        controlLayout.addWidget(self.playFrontButton)
         controlLayout.addWidget(self.positionSlider)
         controlLayout.addLayout(sceneBLayout)
         controlLayout.addWidget(self.showAllButton)
@@ -293,12 +267,24 @@ class VideoWindow(QMainWindow):
         if att_file is not None:
             self.main3Dviewer.attention = self.main3Dviewer.read_attention(att_file)
             
+    def playback(self):
+        self.sliderPause()
+        position = max(0, self.positionSlider.value() - 1)
+        self.setPosition(position)
+        return
+
+    def playfront(self):
+        self.sliderPause()
+        position = min(self.mediaPlayer.duration, self.positionSlider.value() + 1)
+        self.setPosition(position)
+        return
 
     def setFile(self, filename):
         self.mediaPlayer.set_file(filename)
-        if self.correctionWidget.isVisible():
-            self.mediaPlayer.stop_video()
+        self.playback()
         self.playButton.setEnabled(True)
+        self.playBackButton.setEnabled(True)
+        self.playFrontButton.setEnabled(True)
         self.positionSlider.setRange(0, self.mediaPlayer.duration)
         self.minInt.setTop(self.mediaPlayer.duration - 10)
         self.maxInt.setTop(self.mediaPlayer.duration)
@@ -319,50 +305,29 @@ class VideoWindow(QMainWindow):
         if fileName != '':
             self.main3Dviewer.attention = self.main3Dviewer.read_attention(fileName)
 
-    def view0Select(self):
-        if self.mediaPlayer.thread._run_flag:
-            self.mediaPlayer.stop_video()
-        self.mediaPlayer.view = 0
 
-    def view1Select(self):
+    def viewSelect(self):
         if self.mediaPlayer.thread._run_flag:
             self.mediaPlayer.stop_video()
-        self.mediaPlayer.view = 1
+        view_id = self.sender().data()
+        if view_id == 0:
+            self.curr_views = [view_id]
+        else:
+            if len(self.curr_views) == 1:
+                if self.curr_views[0] == 0:
+                    self.curr_views = [view_id]
+                elif view_id not in self.curr_views: self.curr_views.append(view_id)
+            else:
+                if view_id not in self.curr_views: 
+                    self.curr_views.pop(0)
+                    self.curr_views.append(view_id)
+                else: self.curr_views.remove(view_id)
 
-    def view2Select(self):
-        if self.mediaPlayer.thread._run_flag:
-            self.mediaPlayer.stop_video()
-        self.mediaPlayer.view = 2
-
-    def view3Select(self):
-        if self.mediaPlayer.thread._run_flag:
-            self.mediaPlayer.stop_video()
-        self.mediaPlayer.view = 3
-
-    def view4Select(self):
-        if self.mediaPlayer.thread._run_flag:
-            self.mediaPlayer.stop_video()
-        self.mediaPlayer.view = 4
-
-    def view5Select(self):
-        if self.mediaPlayer.thread._run_flag:
-            self.mediaPlayer.stop_video()
-        self.mediaPlayer.view = 5
-
-    def view6Select(self):
-        if self.mediaPlayer.thread._run_flag:
-            self.mediaPlayer.stop_video()
-        self.mediaPlayer.view = 6
-
-    def view7Select(self):
-        if self.mediaPlayer.thread._run_flag:
-            self.mediaPlayer.stop_video()
-        self.mediaPlayer.view = 7
-
-    def view8Select(self):
-        if self.mediaPlayer.thread._run_flag:
-            self.mediaPlayer.stop_video()
-        self.mediaPlayer.view = 8
+        for i in range(9): 
+            if i in self.curr_views: self.viewAction[i].setChecked(True)
+            else: self.viewAction[i].setChecked(False)
+        self.mediaPlayer.view = sorted(self.curr_views)
+        self.mediaPlayer.update_last_image()
 
     def correctSelect(self):
         if self.mediaPlayer.thread._run_flag:
@@ -371,6 +336,7 @@ class VideoWindow(QMainWindow):
         self.correctionWidget.raise_()
         self.correctionWidget.update_frame()
         self.mediaPlayer.set_annotation(True)
+        self.main3Dviewer.set_annotation(True)
 
     def exitCall(self):
         self.close()
@@ -387,17 +353,17 @@ class VideoWindow(QMainWindow):
         if self.mediaPlayer.thread._run_flag:
             self.mediaPlayer.stop_video()
             self.playButton.setIcon(
-                    self.style().standardIcon(QStyle.SP_MediaPause))
+                    self.style().standardIcon(QStyle.SP_MediaPlay))
         else:
             self.mediaPlayer.start_video()
             self.playButton.setIcon(
-                    self.style().standardIcon(QStyle.SP_MediaPlay))            
+                    self.style().standardIcon(QStyle.SP_MediaPause))            
 
     def sliderPause(self):
         # When slider is clicked
         self.mediaPlayer.stop_video()
         self.playButton.setIcon(
-                self.style().standardIcon(QStyle.SP_MediaPause))
+                self.style().standardIcon(QStyle.SP_MediaPlay))
 
     def setImageSlider(self):
         # Update Image after slider release

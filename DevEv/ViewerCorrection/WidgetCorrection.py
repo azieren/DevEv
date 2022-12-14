@@ -3,12 +3,13 @@ from PyQt5.QtWidgets import QStyle, QPushButton, QLabel, QVBoxLayout, QWidget, Q
 from PyQt5.QtCore import pyqtSignal, QDir, Qt
 #from PyQt5.QtGui import QMessageBox
 import pyqtgraph as pg
-import cv2
+import copy
 import pkg_resources
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 from matplotlib import pyplot as plt
 from scipy import interpolate
+from scipy.ndimage import gaussian_filter as filter1d
 
 from .GaussianProcess import get_uncertainty
 from .utils import rotation_matrix_from_vectors, project_2d, build_mask, to_3D
@@ -40,6 +41,9 @@ class CorrectionWindow(QWidget):
         self.resize(400 , 200 )
 
         self.viewer3D = viewer3D
+        self.viewer3D.attention_sig.connect(self.change_attention_sig)
+        self.viewer3D.direction_sig.connect(self.change_att_direction)
+        self.viewer3D.position_sig.connect(self.change_position_sig)
         self.frame_list = sorted(list(range(0, 300, 20)))#[0, 100, 200, 300]
         self.curr_indice = 0
         self.old_yaw, self.old_pitch, self.old_roll = 0, 0, 0
@@ -356,6 +360,20 @@ class CorrectionWindow(QWidget):
 
         return
 
+    def change_attention_sig(self, att):
+        self.old_x_att, self.old_y_att, self.old_z_att = att[0], att[1], att[2]
+        self.max_XAEdit.setValue(att[0])
+        self.max_YAEdit.setValue(att[1])
+        self.max_ZAEdit.setValue(att[2])
+        return
+
+    def change_position_sig(self, pos):
+        self.old_x, self.old_y, self.old_z = pos[0], pos[1], pos[2]
+        self.max_XEdit.setValue(pos[0])
+        self.max_YEdit.setValue(pos[1])
+        self.max_ZEdit.setValue(pos[2])
+        return
+
     def update_frame(self):
         if self.curr_indice == -1: return
         curr_frame = self.frame_list[self.curr_indice]
@@ -529,8 +547,12 @@ class CorrectionWindow(QWidget):
         x_tr, frame_list, corrected_list = [], [], []
         for i, (f, p) in enumerate(self.viewer3D.attention.items()):
             p, v = p["u"][0], p["u"][1]-p["u"][0]
-            v = v/np.linalg.norm(v)
-            info = np.concatenate([p, v], axis=0)
+            v_n = np.linalg.norm(v)
+            if v_n <= 1e-6:
+                info = x_tr[-1]
+            else:
+                v = v/v_n
+                info = np.concatenate([p, v], axis=0)
             x_tr.append(info)
             frame_list.append(f)
             if f in self.corrected_list:
@@ -539,34 +561,52 @@ class CorrectionWindow(QWidget):
 
         if len(self.corrected_list) == 0: return x_tr, frame_list
 
-        mask = build_mask(corrected_list, len(x_tr))[:, np.newaxis]
-        #plt.plot(mask[:100])
-        #plt.show()
-        if 0 not in corrected_list: corrected_list = [0] + corrected_list
-        if len(x_tr)-1 not in corrected_list: corrected_list = corrected_list + [len(x_tr)-1]
+        mask = build_mask(corrected_list, len(x_tr), threshold = 30)[:, np.newaxis]
+        
+        
+        start, end = min(corrected_list), max(corrected_list)
+        start, end = max(0, start - 30), min(len(x_tr)-1, end + 30)
+        mask = mask[start:end]
+        print("Length of mask", mask.shape)
+        plt.plot(mask)
+        plt.show()
+        corrected_list = [start] + corrected_list + [end]
         correction = x_tr[corrected_list]
 
-        f = interpolate.interp1d(corrected_list, correction, axis=0)
-        x_interp = f(np.arange(0, len(x_tr), 1))
+        f = interpolate.interp1d(corrected_list, correction, axis=0, kind = 'quadratic')
+        x_interp = f(np.arange(start, end, 1))
         #plt.plot(x_tr[:,0], "-r")
-        x_tr = (1-mask)*x_tr + mask * x_interp
+        x_tr[start:end] = (1-mask)*x_tr[start:end] + mask * x_interp
+        #for i in range(6):
+        #x_tr[:, i] = filter1d(x_tr[:,i])
         #plt.plot(x_interp[:,0], "-b")
         #plt.plot(x_tr[:,0], "-g")
         #plt.show()
 
+        old_p = None
         for i, f in enumerate(frame_list):
+            if not (start <= f < end): continue
             p = self.viewer3D.attention[f]
             pos = x_tr[i, :3]
             v = x_tr[i, 3:]
-            v = v/np.linalg.norm(v)
+            v_n = np.linalg.norm(v)
+            if v_n <= 1e-6:
+                v = np.copy(p["u"][1] - p["u"][0])
+                v = v/np.linalg.norm(v)
+            else:
+                v = v/v_n
             att = self.viewer3D.collision(pos, v)
-            if att is None or v is None or pos is None:
+            if (att is None or v is None or pos is None) and old_p is not None:
+                p = copy.deepcopy(old_p)
                 continue
             p["head"] = pos
             p["u"][0], p["line"][0] = pos, pos
-            p["u"][0] = pos + v
+            p["u"][1] = pos + v*5.0
             p["line"][1] = att
             p["att"] = att
+            size = np.linalg.norm(pos - att)
+            p["size"] = size*4.0
+            old_p = p
         return x_tr, frame_list
 
     def runGP(self):
@@ -574,7 +614,7 @@ class CorrectionWindow(QWidget):
         x_tr, frame_list = self.propagate()
         self.write_attention("temp.txt")
         N = len(self.viewer3D.attention) // 1800
-        uncertain_frames = get_uncertainty(x_tr, max_n= N * 10)
+        uncertain_frames = get_uncertainty(x_tr, max_n= N * 12)
         self.frame_list = sorted([frame_list[f] for f in uncertain_frames])
         print(self.frame_list)
         print("{} Frames proposed to correct".format(len(self.frame_list)))
@@ -610,6 +650,7 @@ class CorrectionWindow(QWidget):
         return
 
     def finish(self):
+        self.propagate()
         self.write_attention()
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Information)

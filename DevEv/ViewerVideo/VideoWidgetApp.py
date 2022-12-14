@@ -55,7 +55,7 @@ class VideoApp(QWidget):
         self.thread.change_pixmap_signal.connect(self.update_image)
         self.thread.frame_id.connect(self.update_text)
         # start the thread     
-        self.view = 0
+        self.view = [0]
 
     def select_view(self, img):
         h, w, _ = img.shape
@@ -69,16 +69,19 @@ class VideoApp(QWidget):
                 if "att_v" in info:
                     img = cv2.circle(img, info["att_v"], radius=5, color= (0,0,255), thickness=20)
                                 
-        if self.view == 0: return img
-        elif self.view == 1: return img[:h//4, :w//2]
-        elif self.view == 2: return img[:h//4, w//2:]
-        elif self.view == 3: return img[h//4:h//2, :w//2]
-        elif self.view == 4: return img[h//4:h//2, w//2:]
-        elif self.view == 5: return img[h//2:3*h//4, :w//2]
-        elif self.view == 6: return img[h//2:3*h//4, w//2:]
-        elif self.view == 7: return img[3*h//4:, :w//2]
-        elif self.view == 8: return img[3*h//4:, w//2:]
-        return img[h//2:, w//2:]
+        if self.view[0] == 0: return img
+        im = []
+        for view in self.view:
+            if view == 1: im.append(img[:h//4, :w//2])
+            elif view == 2: im.append(img[:h//4, w//2:])
+            elif view == 3: im.append(img[h//4:h//2, :w//2])
+            elif view == 4: im.append(img[h//4:h//2, w//2:])
+            elif view == 5: im.append(img[h//2:3*h//4, :w//2])
+            elif view == 6: im.append(img[h//2:3*h//4, w//2:])
+            elif view == 7: im.append(img[3*h//4:, :w//2])
+            else: im.append(img[3*h//4:, w//2:])
+        im = np.concatenate(im, axis=0)
+        return im
 
     def set_file(self, filename):
         self.thread.terminate()
@@ -88,11 +91,17 @@ class VideoApp(QWidget):
 
     def setPosition(self, position):
         self.thread.position_flag = position
-        self.textLabel.setText(str(position))
+        second = position//self.thread.fps
+        self.textLabel.setText("Time: {} mn {} \t-\t Frame: {}".format(second//60, second % 60, position))
         self.last_position = position
         return
 
+    def update_last_image(self):
+        self.thread.wait()
+        self.thread.get_last_image()
+
     def showImage(self):
+        self.thread.wait()
         self.thread.get_image(self.last_position)
 
     def stop_video(self):
@@ -101,13 +110,13 @@ class VideoApp(QWidget):
         self.thread._run_flag = False
 
     def start_video(self):
+        self.thread.wait()
         self.thread._run_flag = True
         self.thread.start()
 
     def closeEvent(self, event):
-        self.thread.terminate()
-        self.thread.wait()
         self.thread.close()
+        self.thread.quit()
         event.accept()
 
     def video_clicked(self, event):
@@ -128,6 +137,7 @@ class VideoApp(QWidget):
 
     @pyqtSlot(dict)
     def update_image_proj(self, poses):
+        self.stop_video()
         self.p2d = poses
         self.thread.get_image(self.last_position, emit_frame=False)
 
@@ -138,7 +148,8 @@ class VideoApp(QWidget):
 
     @pyqtSlot(int)
     def update_text(self, frame):
-        self.textLabel.setText(str(frame))
+        second = frame//self.thread.fps
+        self.textLabel.setText("Frame: {} \t Time: {} mn {} s".format(frame, second//60, second % 60))
         self.frame_id.emit(frame)
 
     @pyqtSlot(bool)

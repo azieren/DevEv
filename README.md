@@ -8,7 +8,7 @@ pip install -r requirement.txt
 
  Alternatively
  
-pip install numpy scipy matplotlib opencv-python-headless pyqtgraph PyQt5 PyOpenGL
+pip install numpy scipy matplotlib opencv-python-headless pyqtgraph PyQt5 PyOpenGL trimesh
 
 
 # Install

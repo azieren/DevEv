@@ -33,6 +33,9 @@ def GP(x_tr, tau = 10):
 
         segment = x_tr[tau_min:tau_max]
         mu = np.mean(segment, axis = 0)
+        if np.nan in mu or np.inf in mu:
+            print(t, tau_min, tau_max, segment.shape)
+            exit()
         temp = segment - mu
         sigma = np.dot(temp.T, temp)/(tau+1)
 
