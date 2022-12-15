@@ -30,7 +30,7 @@ class MTL(GLGraphicsItem.GLGraphicsItem):
                 raise ValueError
             elif values[0] == 'map_Kd':
                 # load the texture referred to by this declaration
-                mtl[values[0]] = pkg_resources.resource_filename('DevEv', os.path.join('metadata/RoomData/scene/', values[1]))
+                mtl[values[0]] = pkg_resources.resource_filename('DevEv', os.path.join('metadata/RoomData/scene/', values[1].replace("\\","/")))
 
             else:
                 mtl[values[0]] = [float(x) for x  in values[1:]]
