@@ -568,8 +568,8 @@ class CorrectionWindow(QWidget):
         start, end = max(0, start - 30), min(len(x_tr)-1, end + 30)
         mask = mask[start:end]
         print("Length of mask", mask.shape)
-        plt.plot(mask)
-        plt.show()
+        #plt.plot(mask)
+        #plt.show()
         corrected_list = [start] + corrected_list + [end]
         correction = x_tr[corrected_list]
 
@@ -635,7 +635,8 @@ class CorrectionWindow(QWidget):
 
     def write_attention(self, fileName = None, new_att = []):
         if fileName is None:
-            fileName, _ = QFileDialog.getSaveFileName(self, "Save Corrected Results", QDir.homePath() + "/corrected.txt", "Text files (*.txt)")
+            fileName, _ = QFileDialog.getSaveFileName(self, "Save Corrected Results", QDir.homePath() + "/corrected.txt", "Text files (*.txt)",
+            options=QFileDialog.DontUseNativeDialog)
             if fileName == '':
                 return
         with open(fileName, "w") as w:
@@ -647,6 +648,7 @@ class CorrectionWindow(QWidget):
                     f, pos[0], pos[1], pos[2], v[0], v[1], v[2], att[0], att[1], att[2]
                 ))
         self.viewer3D.read_attention(fileName)
+        print("File saved")
         return
 
     def finish(self):

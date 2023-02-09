@@ -291,8 +291,9 @@ class VideoWindow(QMainWindow):
         self.correctionWidget.setHW(self.mediaPlayer.height_video, self.mediaPlayer.width_video)       
 
     def openFile(self):
-        fileName, _ = QFileDialog.getOpenFileName(self, "Open Movie",
-                QDir.homePath())
+        fileName, _ = QFileDialog.getOpenFileName(self, "Open Video",
+                QDir.currentPath(),  "Video Files (*.avi *.mp4)", options=QFileDialog.DontUseNativeDialog)
+        
         if fileName != '':
             self.setFile(fileName)
             if not self.mediaPlayer.isVisible():
@@ -300,7 +301,7 @@ class VideoWindow(QMainWindow):
 
     def openFileAtt(self):
         fileName, _ = QFileDialog.getOpenFileName(self, "Open Attention",
-                QDir.homePath())
+                QDir.currentPath(), "Text files (*.txt)", options=QFileDialog.DontUseNativeDialog)
 
         if fileName != '':
             self.main3Dviewer.attention = self.main3Dviewer.read_attention(fileName)
