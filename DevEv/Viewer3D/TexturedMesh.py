@@ -1,3 +1,4 @@
+import pkg_resources
 from OpenGL.GL import *  # noqa
 import numpy as np
 import cv2 
@@ -5,7 +6,7 @@ from PyQt5 import QtGui
 import os
 from pyqtgraph import makeRGBA
 from pyqtgraph.opengl import GLGraphicsItem, MeshData, shaders
-
+#import imageio
 
 __all__ = ['GLMeshItem']
 
@@ -29,7 +30,8 @@ class MTL(GLGraphicsItem.GLGraphicsItem):
                 raise ValueError
             elif values[0] == 'map_Kd':
                 # load the texture referred to by this declaration
-                mtl[values[0]] = os.path.join(dirname, values[1])
+                mtl[values[0]] = pkg_resources.resource_filename('DevEv', os.path.join('metadata/RoomData/scene/', values[1].replace("\\","/")))
+
             else:
                 mtl[values[0]] = [float(x) for x  in values[1:]]
    
@@ -44,6 +46,7 @@ class MTL(GLGraphicsItem.GLGraphicsItem):
                 v['texture_Kd'] = ids[path]
                 continue
             image = cv2.cvtColor( cv2.imread(path),  cv2.COLOR_BGR2RGB)
+            #image = imageio.imread(path)
             image = makeRGBA(image)[0]
             image[:,:,3] = 255
             shape = image.shape
@@ -65,6 +68,7 @@ class MTL(GLGraphicsItem.GLGraphicsItem):
             data = np.ascontiguousarray(image.transpose((1,0,2)))
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, shape[0], shape[1], 0, GL_RGBA, GL_UNSIGNED_BYTE, data)
         #glDisable(GL_TEXTURE_2D)
+
         return 
 
     def paint(self): 

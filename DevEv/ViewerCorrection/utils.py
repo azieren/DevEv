@@ -5,7 +5,7 @@ import cv2
 def gaussian(x, mu, sig):
     return np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
 
-def build_mask(frames, N, sigma = 1, threshold = 30):
+def build_mask_old(frames, N, sigma = 1, threshold = 30):
     mask = np.zeros(N)
     linear = gaussian(np.linspace(-3, 3, threshold*2), 0, sigma)
 
@@ -21,9 +21,26 @@ def build_mask(frames, N, sigma = 1, threshold = 30):
         start = max(0, frames[i+1]-threshold)
         end = min(N, frames[i+1]+threshold)
         start_l = abs(min(0, frames[i+1]-threshold))
-        end_l = threshold*2 - abs(max(0, frames[i+1]+threshold - N))
+        end_l = threshold*2 - abs(max(0, N - frames[i+1]-threshold))
         mask[start:end] = linear[start_l:end_l] 
 
+    return mask
+
+def build_mask(frames, N, sigma = 1, threshold = 30):
+    mask = np.zeros(N)
+    linear = gaussian(np.linspace(-3, 3, threshold*2), 0, sigma)
+
+    for i in range(len(frames)-1):
+        start, end = max(0, frames[i]-threshold), min(N, frames[i]+threshold)
+        start_g, end_g = threshold - (frames[i] - start),  threshold + (end - frames[i])
+        mask[start:end] = np.maximum(mask[start:end], linear[start_g:end_g])
+        if frames[i+1] - frames[i] < threshold:
+            mask[frames[i] : frames[i+1]] = 1
+            continue
+
+    start, end = max(0, frames[-1]-threshold), min(N, frames[-1]+threshold)
+    start_g, end_g = threshold - (frames[-1] - start),  threshold + (end - frames[-1])
+    mask[start:end] = np.maximum(mask[start:end], linear[start_g:end_g])
     return mask
 
 def rotation_matrix_from_vectors(a, b):

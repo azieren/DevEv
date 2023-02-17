@@ -115,8 +115,9 @@ class VideoApp(QWidget):
         self.thread.start()
 
     def closeEvent(self, event):
+        print("Here closing")
+        self.stop_video()
         self.thread.close()
-        self.thread.quit()
         event.accept()
 
     def video_clicked(self, event):
