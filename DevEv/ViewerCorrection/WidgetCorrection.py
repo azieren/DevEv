@@ -17,7 +17,9 @@ from .utils import rotation_matrix_from_vectors, project_2d, build_mask, to_3D
 class ListWidgetItem(QListWidgetItem):
     def __lt__(self, other):
         try:
-            return float(self.text()) < float(other.text())
+            text = self.text().split(" ")[0]
+            other = other.text().split(" ")[0]
+            return float(text) < float(other)
         except Exception:
             return QListWidgetItem.__lt__(self, other)
 
@@ -44,12 +46,13 @@ class CorrectionWindow(QWidget):
         self.viewer3D.attention_sig.connect(self.change_attention_sig)
         self.viewer3D.direction_sig.connect(self.change_att_direction)
         self.viewer3D.position_sig.connect(self.change_position_sig)
-        self.frame_list = sorted(list(range(0, 300, 20)))#[0, 100, 200, 300]
-        self.curr_indice = 0
+        self.frame_list = []
+        self.curr_indice = -1
         self.old_yaw, self.old_pitch, self.old_roll = 0, 0, 0
         self.old_x, self.old_y, self.old_z = 0, 0, 0
         self.old_x_att, self.old_y_att, self.old_z_att = 0, 0, 0
-        self.corrected_list = []
+        self.corrected_list = set()
+        self.history_corrected = self.viewer3D.corrected_frames
         self.modify_att = True
         ## Init cameras
         self.setHW(0, 0)
@@ -57,12 +60,13 @@ class CorrectionWindow(QWidget):
         self.frame_listW = QListWidget()
         self.frame_listW.setSelectionMode(QAbstractItemView.SingleSelection)
         for f in self.frame_list:
-            self.frame_listW.addItem(ListWidgetItem(str(f)))
+            self.frame_listW.addItem(ListWidgetItem("{} - NA".format(f)))
         self.frame_listW.itemDoubleClicked.connect(self.select_frame)
         self.frame_listW.setCurrentRow(self.curr_indice)
         self.frame_listW.setSortingEnabled(True)
         ## Some text
-        self.framelabel = QLabel("Frame: " + str(self.frame_list[self.curr_indice]))
+        if len(self.frame_list) == 0: self.framelabel = QLabel("No Frame")
+        else: self.framelabel = QLabel("Frame: " + str(self.frame_list[self.curr_indice]))
         #self.nextframelabel = QLabel("Next Frame: " + str(self.frame_list[(self.curr_indice + 1) % len(self.frame_list)]))
 
         self.addButton = QPushButton("&+")
@@ -116,6 +120,12 @@ class CorrectionWindow(QWidget):
         self.project3dButton = QPushButton("&Project 3D")
         self.project3dButton.setEnabled(True)
         self.project3dButton.setIcon(self.style().standardIcon(QStyle.SP_MessageBoxQuestion))
+
+        ## Project 3d button
+        self.showCorrectButton = QPushButton("&Show Corrected")
+        self.showCorrectButton.setEnabled(True)
+        self.showCorrectButton.setIcon(self.style().standardIcon(QStyle.SP_MessageBoxQuestion))
+        self.showCorrectButton.clicked.connect(self.showCorrected)
 
         ## RFinish button 
         self.finishButton = QPushButton("&Save and Finish")
@@ -280,9 +290,13 @@ class CorrectionWindow(QWidget):
         featureLayout.addWidget(self.project2dButton)
         featureLayout.addWidget(self.runGPButton)
 
+        corrLayout = QHBoxLayout()
+        corrLayout.addWidget(self.project3dButton)
+        corrLayout.addWidget(self.showCorrectButton)
+
         subLayout = QVBoxLayout()
         subLayout.addLayout(featureLayout)
-        subLayout.addWidget(self.project3dButton)
+        subLayout.addLayout(corrLayout)
         subLayout.addWidget(self.finishButton)
 
         mainLayout = QHBoxLayout()     
@@ -316,7 +330,7 @@ class CorrectionWindow(QWidget):
             self.frame_list.append(value)
             self.frame_list = sorted(self.frame_list)
 
-            self.frame_listW.addItem(ListWidgetItem(str(value)))
+            self.frame_listW.addItem(ListWidgetItem("{} - NA".format(value)))
             self.curr_indice = self.frame_listW.currentRow()
             if len(self.frame_list) == 1: 
                 self.frame_listW.setCurrentRow(0)
@@ -398,8 +412,7 @@ class CorrectionWindow(QWidget):
         return
 
     def x_changed(self, box, value):
-        curr_frame = self.frame_list[self.curr_indice]
-        new_vec = self.viewer3D.translate_attention(curr_frame, value - self.old_x, 0.0, 0.0)
+        new_vec = self.viewer3D.translate_head(value - self.old_x, 0.0, 0.0)
         self.old_x = value
         self.modify_att = False
         self.change_att_direction(new_vec)
@@ -407,8 +420,7 @@ class CorrectionWindow(QWidget):
         return
 
     def y_changed(self, box, value):
-        curr_frame = self.frame_list[self.curr_indice]
-        new_vec = self.viewer3D.translate_attention(curr_frame, 0.0, value - self.old_y, 0.0)
+        new_vec = self.viewer3D.translate_head(0.0, value - self.old_y, 0.0)
         self.old_y = value
         self.modify_att = False
         self.change_att_direction(new_vec)  
@@ -416,8 +428,7 @@ class CorrectionWindow(QWidget):
         return
 
     def z_changed(self, box, value):
-        curr_frame = self.frame_list[self.curr_indice]
-        new_vec = self.viewer3D.translate_attention(curr_frame, 0.0, 0.0, value - self.old_z)
+        new_vec = self.viewer3D.translate_head(0.0, 0.0, value - self.old_z)
         self.old_z = value
         self.modify_att = False
         self.change_att_direction(new_vec)
@@ -439,43 +450,37 @@ class CorrectionWindow(QWidget):
         return
 
     def x_att_changed(self, box, value):
-        curr_frame = self.frame_list[self.curr_indice]
-        new_vec = self.viewer3D.translate_attention_p(curr_frame, value - self.old_x_att, 0.0, 0.0)
+        new_vec = self.viewer3D.translate_attention_p(value - self.old_x_att, 0.0, 0.0)
         self.old_x_att = value
         self.change_att_direction(new_vec)
         return
 
     def y_att_changed(self, box, value):
-        curr_frame = self.frame_list[self.curr_indice]
-        new_vec = self.viewer3D.translate_attention_p(curr_frame, 0.0, value - self.old_y_att, 0.0)
+        new_vec = self.viewer3D.translate_attention_p(0.0, value - self.old_y_att, 0.0)
         self.old_y_att = value
         self.change_att_direction(new_vec)
         return
 
     def z_att_changed(self, box, value):
-        curr_frame = self.frame_list[self.curr_indice]
-        new_vec = self.viewer3D.translate_attention_p(curr_frame, 0.0, 0.0, value - self.old_z_att)
+        new_vec = self.viewer3D.translate_attention_p(0.0, 0.0, value - self.old_z_att)
         self.old_z_att = value
         self.change_att_direction(new_vec)
         return
 
     def yaw_changed(self, box, value):
-        curr_frame = self.frame_list[self.curr_indice]
-        att = self.viewer3D.rotate_attention(curr_frame, value - self.old_yaw, "x", self.modify_att)
+        att = self.viewer3D.rotate_attention(value - self.old_yaw, "x", self.modify_att)
         self.old_yaw = value
         self.update_att(att)
         return
 
     def pitch_changed(self, box, value):
-        curr_frame = self.frame_list[self.curr_indice]
-        att = self.viewer3D.rotate_attention(curr_frame, value - self.old_pitch, "y", self.modify_att)
+        att = self.viewer3D.rotate_attention(value - self.old_pitch, "y", self.modify_att)
         self.old_pitch = value
         self.update_att(att)
         return
 
     def roll_changed(self, box, value):
-        curr_frame = self.frame_list[self.curr_indice]
-        att = self.viewer3D.rotate_attention(curr_frame, value - self.old_roll, "z", self.modify_att)
+        att = self.viewer3D.rotate_attention(value - self.old_roll, "z", self.modify_att)
         self.old_roll = value
         self.update_att(att)
         return
@@ -503,7 +508,7 @@ class CorrectionWindow(QWidget):
         curr_frame = self.frame_list[self.curr_indice]
         self.frame_id.emit(curr_frame)
         if curr_frame not in self.corrected_list:
-            self.corrected_list.append(curr_frame)
+            self.corrected_list.add(curr_frame)
         self.frame_listW.item(self.curr_indice).setBackground(Qt.green)
         return
 
@@ -511,14 +516,14 @@ class CorrectionWindow(QWidget):
         if len(data) < 2: return
         if self.curr_indice == -1: return
         curr_frame = self.frame_list[self.curr_indice]
-        item = self.viewer3D.drawn_item[curr_frame]
+        item = self.viewer3D.current_item
 
         att = to_3D(data, self.cams, self.h, self.w)
-        u = att - item["head"].pos
+        u = att - item["head"].pos[0]
         u = u / np.linalg.norm(u)
-        att = self.viewer3D.collision(item["head"].pos, u)
+        att = self.viewer3D.collision(item["head"].pos[0], u)
  
-        p = {"pos":item["head"].pos, "att":att}
+        p = {"pos":item["head"].pos[0], "att":att}
         poses = project_2d(p, self.cams, self.h, self.w)
 
         new_vec = self.viewer3D.translate_attention_p(curr_frame, 
@@ -531,10 +536,9 @@ class CorrectionWindow(QWidget):
 
     def project2D(self):    
         if self.curr_indice == -1: return
-        curr_frame = self.frame_list[self.curr_indice]
-        item = self.viewer3D.drawn_item[curr_frame]
-        pos = item["head"].pos
-        u = item["att"].pos - pos
+        item = self.viewer3D.current_item
+        pos = item["head"].pos[0]
+        u = item["att"].pos[0] - pos
         u = u / np.linalg.norm(u)
         att = self.viewer3D.collision(pos, u)
 
@@ -543,94 +547,113 @@ class CorrectionWindow(QWidget):
         self.pose2d.emit(poses)
         return
 
-    def propagate(self):
-        x_tr, frame_list, corrected_list = [], [], []
+    def propagate(self, threshold = 30):
+        if len(self.corrected_list) == 0: 
+            print("No frame corrected")
+            return 
+
+        self.corrected_list = sorted(self.corrected_list)
+        f = self.corrected_list.pop()
+        corrected_merged = [[f]]
+        self.viewer3D.attention[f]["corrected_flag"] = 1
+        for f in self.corrected_list:
+            self.viewer3D.attention[f]["corrected_flag"] = 1
+            prev = corrected_merged[-1][-1]
+            if abs(f-prev) < threshold:
+                corrected_merged[-1].append(f)
+            else:
+                corrected_merged.append([f])
+
+        min_f, max_f = min(self.viewer3D.attention.keys()), max(self.viewer3D.attention.keys())
+        for seg in corrected_merged: 
+            seg = sorted(seg)        
+            start, end = max(min_f, seg[0]-threshold), min(seg[-1] + threshold, max_f)
+            print(seg, start, end)
+            mask = build_mask([x-start for x in seg], end-start+1, threshold = threshold)[:, np.newaxis]
+            interp_list = [start] + seg + [end]
+            interp_poses = []
+            for f in interp_list:
+                p = self.viewer3D.attention[f]
+                h, v = p["u"][0], p["u"][1]-p["u"][0]
+                v_n = np.linalg.norm(v)
+                if v_n <= 1e-6:
+                    info = interp_poses[-1]
+                else:
+                    v = v/v_n
+                    info = np.concatenate([h, v], axis=0)
+                interp_poses.append(info) 
+            interp_poses = np.array(interp_poses)   
+            interp_func = interpolate.interp1d(interp_list, interp_poses, axis=0, kind = 'quadratic')
+            x_interp = interp_func(np.arange(start, end, 1))
+            old_p = None
+            for i, f in enumerate(range(start, end)):
+                p = self.viewer3D.attention[f]
+                m = mask[i]
+                v_or = np.copy(p["u"][1] - p["u"][0])
+                p["head"] = (1-m)*p["head"] + x_interp[i, :3]*m
+                v = (1-m)*v_or + x_interp[i, 3:]*m
+                v_n = np.linalg.norm(v)
+                if v_n <= 1e-6:
+                    v = np.copy(p["u"][1] - p["u"][0])
+                    v = v/np.linalg.norm(v)
+                else:
+                    v = v/v_n          
+                att = self.viewer3D.collision(p["head"], v)
+                if (att is None or v is None or p["head"] is None) and old_p is not None:
+                    p = copy.deepcopy(old_p)
+                    continue 
+                p["u"][0], p["line"][0] = p["head"], p["head"]
+                p["u"][1] = p["head"] + v*5.0
+                p["line"][1] = att
+                p["att"] = att
+                size = np.linalg.norm(p["head"] - att)
+                p["size"] = np.clip(size*4.0, 10.0, 80.0)
+                old_p = p                  
+        return 
+
+    def runGP(self):
+        x_tr, frame_list = [], []
         for i, (f, p) in enumerate(self.viewer3D.attention.items()):
-            p, v = p["u"][0], p["u"][1]-p["u"][0]
+            h, v = p["u"][0], p["u"][1]-p["u"][0]
             v_n = np.linalg.norm(v)
             if v_n <= 1e-6:
                 info = x_tr[-1]
             else:
                 v = v/v_n
-                info = np.concatenate([p, v], axis=0)
+                info = np.concatenate([h, v], axis=0)
             x_tr.append(info)
             frame_list.append(f)
-            if f in self.corrected_list:
-                corrected_list.append(i)
-        x_tr = np.array(x_tr)
 
-        if len(self.corrected_list) == 0: return x_tr, frame_list
-
-        mask = build_mask(corrected_list, len(x_tr), threshold = 30)[:, np.newaxis]
-        
-        
-        start, end = min(corrected_list), max(corrected_list)
-        start, end = max(0, start - 30), min(len(x_tr)-1, end + 30)
-        mask = mask[start:end]
-        print("Length of mask", mask.shape)
-        #plt.plot(mask)
-        #plt.show()
-        corrected_list = [start] + corrected_list + [end]
-        correction = x_tr[corrected_list]
-
-        f = interpolate.interp1d(corrected_list, correction, axis=0, kind = 'quadratic')
-        x_interp = f(np.arange(start, end, 1))
-        #plt.plot(x_tr[:,0], "-r")
-        x_tr[start:end] = (1-mask)*x_tr[start:end] + mask * x_interp
-        #for i in range(6):
-        #x_tr[:, i] = filter1d(x_tr[:,i])
-        #plt.plot(x_interp[:,0], "-b")
-        #plt.plot(x_tr[:,0], "-g")
-        #plt.show()
-
-        old_p = None
-        for i, f in enumerate(frame_list):
-            if not (start <= f < end): continue
-            p = self.viewer3D.attention[f]
-            pos = x_tr[i, :3]
-            v = x_tr[i, 3:]
-            v_n = np.linalg.norm(v)
-            if v_n <= 1e-6:
-                v = np.copy(p["u"][1] - p["u"][0])
-                v = v/np.linalg.norm(v)
-            else:
-                v = v/v_n
-            att = self.viewer3D.collision(pos, v)
-            if (att is None or v is None or pos is None) and old_p is not None:
-                p = copy.deepcopy(old_p)
-                continue
-            p["head"] = pos
-            p["u"][0], p["line"][0] = pos, pos
-            p["u"][1] = pos + v*5.0
-            p["line"][1] = att
-            p["att"] = att
-            size = np.linalg.norm(pos - att)
-            p["size"] = size*4.0
-            old_p = p
-        return x_tr, frame_list
-
-    def runGP(self):
-
-        x_tr, frame_list = self.propagate()
         self.write_attention("temp.txt")
         N = len(self.viewer3D.attention) // 1800
-        uncertain_frames = get_uncertainty(x_tr, max_n= N * 12)
-        self.frame_list = sorted([frame_list[f] for f in uncertain_frames])
+        uncertain_frames, uncertain_scores = get_uncertainty(x_tr, max_n= N * 10)
+        uncertain_frames = np.array([frame_list[f] for f in uncertain_frames])
+        ind = uncertain_frames.argsort()
+        uncertain_scores = uncertain_scores[ind]
+        self.frame_list = uncertain_frames[ind]
         print(self.frame_list)
-        print("{} Frames proposed to correct".format(len(self.frame_list)))
+        print("{} Frames proposed to correct, 10 frames/min".format(len(self.frame_list)))
         if len(self.frame_list) == 0:
             self.curr_indice = -1
             self.frame_listW.clear()
-            self.corrected_list = []
+            self.corrected_list = set()
             return
 
         self.curr_indice = 0
         self.frame_listW.clear()
-        for f in self.frame_list:
-            self.frame_listW.addItem(ListWidgetItem(str(f)))
+        for f, s in zip(self.frame_list, uncertain_scores):
+            self.frame_listW.addItem(ListWidgetItem("{} - {:.2f}".format(f,s)))
         self.frame_listW.setCurrentRow(0)
-        self.corrected_list = []
+        self.corrected_list = set()
         self.update_frame()
+        return
+
+    def showCorrected(self):
+        if len(self.history_corrected) == 0:
+            message = "No frames"
+        else:
+            message = "\n".join([str(x) for x in self.history_corrected])
+        QMessageBox.about(self, "List of corrected frames", message)
         return
 
     def write_attention(self, fileName = None, new_att = []):
@@ -644,11 +667,15 @@ class CorrectionWindow(QWidget):
             for i, (f, p) in enumerate(self.viewer3D.attention.items()):
                 pos, v = p["u"][0], p["u"][1]-p["u"][0]
                 att = p["att"]
-                w.write("{:d},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f}\n".format(
-                    f, pos[0], pos[1], pos[2], v[0], v[1], v[2], att[0], att[1], att[2]
+                flag = p["corrected_flag"]
+                w.write("{:d},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:d}\n".format(
+                    f, pos[0], pos[1], pos[2], v[0], v[1], v[2], att[0], att[1], att[2], flag
                 ))
+                if flag: self.history_corrected.add(f)
         self.viewer3D.read_attention(fileName)
+        print("Corrected frames:", len(self.history_corrected))
         print("File saved")
+        
         return
 
     def finish(self):

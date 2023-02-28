@@ -178,6 +178,19 @@ class VideoWindow(QMainWindow):
         correctAction.setStatusTip('Correction Tool')
         correctAction.triggered.connect(self.correctSelect)
 
+        self.roomActions = []
+        titles = ['&Hide Room', '&Wireframe Room', '&Transparent Room', '&Solid Room']
+        tips = ['Hide 3D Room', 'Show 3D Room in wireframe', 'Show 3D Room with transparence', 'Show 3D Room']
+        for i in range(4):
+            action = QAction(titles[i], self, checkable=True)        
+            #action.setShortcut(str(i))
+            if i == 3: action.setChecked(True)
+            else: action.setChecked(False)
+            action.setStatusTip(tips[i])
+            action.setData(i)
+            action.triggered.connect(self.toggleRoomStyle)
+            self.roomActions.append(action)
+
         # Create menu bar and add action
         menuBar = self.menuBar()
         fileMenu = menuBar.addMenu('&File')
@@ -188,7 +201,6 @@ class VideoWindow(QMainWindow):
         fileMenu.addSeparator()
         fileMenu.addAction(exitAction)
         
-
         viewMenu = menuBar.addMenu('&View')
         for i in range(9):
             viewMenu.addAction(self.viewAction[i])
@@ -197,6 +209,10 @@ class VideoWindow(QMainWindow):
 
         correctMenu = menuBar.addMenu('&Correction')
         correctMenu.addAction(correctAction)
+
+        roomMenu = menuBar.addMenu('&Room View')
+        for a in self.roomActions:
+            roomMenu.addAction(a)
 
         vizLayout = QVBoxLayout()
         vizLayout.addWidget(self.showVecButton)
@@ -292,7 +308,7 @@ class VideoWindow(QMainWindow):
 
     def openFile(self):
         fileName, _ = QFileDialog.getOpenFileName(self, "Open Video",
-                QDir.currentPath(),  "Video Files (*.avi *.mp4)", options=QFileDialog.DontUseNativeDialog)
+                QDir.currentPath(),  "Video Files (*.avi *.mp4)" )#, options=QFileDialog.DontUseNativeDialog)
         
         if fileName != '':
             self.setFile(fileName)
@@ -301,7 +317,7 @@ class VideoWindow(QMainWindow):
 
     def openFileAtt(self):
         fileName, _ = QFileDialog.getOpenFileName(self, "Open Attention",
-                QDir.currentPath(), "Text files (*.txt)", options=QFileDialog.DontUseNativeDialog)
+                QDir.currentPath(), "Text files (*.txt)")#, options=QFileDialog.DontUseNativeDialog)
 
         if fileName != '':
             self.main3Dviewer.attention = self.main3Dviewer.read_attention(fileName)
@@ -329,6 +345,15 @@ class VideoWindow(QMainWindow):
             else: self.viewAction[i].setChecked(False)
         self.mediaPlayer.view = sorted(self.curr_views)
         self.mediaPlayer.update_last_image()
+
+    def toggleRoomStyle(self):
+        view_id = self.sender().data()
+        for i in range(len(self.roomActions)):
+            self.roomActions[i].setChecked(False)
+        self.roomActions[view_id].setChecked(True)
+        self.main3Dviewer.setRoomStyle(view_id)
+
+
 
     def correctSelect(self):
         if self.mediaPlayer.thread._run_flag:
@@ -434,6 +459,7 @@ class VideoWindow(QMainWindow):
         if b.text() == "None":
             if b.isChecked() == True:
                 self.main3Dviewer.line_type = 3
+        self.main3Dviewer.draw_frame(None, plot_vec = True)
         if self.showAllButton.isChecked():
             self.changeShowAllmax()
         else:
