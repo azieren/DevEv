@@ -353,8 +353,6 @@ class VideoWindow(QMainWindow):
         self.roomActions[view_id].setChecked(True)
         self.main3Dviewer.setRoomStyle(view_id)
 
-
-
     def correctSelect(self):
         if self.mediaPlayer.thread._run_flag:
             self.mediaPlayer.stop_video()

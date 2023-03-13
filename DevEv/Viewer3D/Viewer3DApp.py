@@ -73,11 +73,11 @@ class View3D(gl.GLViewWidget):
 
         #plane_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/room_setup2.json')
         #self.plane_dict = self.read_planes(plane_file)
-        room_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/LAB.ply')
+        room_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/Room.ply')
         self.mesh = self.read_room(room_file)
         att_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/attention.txt')
         self.attention = self.read_attention(att_file)
-        #self.keypoints = self.read_keypoints("data_3d_DevEv_S_12_01_MobileInfants_trim.npy")
+        self.keypoints = self.read_keypoints("DevEv/data_2.6d_DevEv_S07_04.npy")
         #self.draw_skeleton()
         self.init()
         return
@@ -86,7 +86,7 @@ class View3D(gl.GLViewWidget):
         u =  np.array([[0.0,0.0,0.0], [0.0,0.0,1.0]])
         self.current_item["head"] = gl.GLScatterPlotItem(pos = u[0].reshape(1,3), color=self.base_color, size = np.array([20.0]),  glOptions = 'additive')
         self.current_item["att"] = gl.GLScatterPlotItem(pos = u[1].reshape(1,3), color=self.base_color, size = np.array([1.0]), glOptions = 'additive')
-        self.current_item["vec"] = gl.GLLinePlotItem(pos = u, color = np.array([self.base_color, self.base_color2]), width= 3.0, antialias = True, glOptions = 'additive')
+        self.current_item["vec"] = gl.GLLinePlotItem(pos = u, color = np.array([self.base_color, self.base_color2]), width= 3.0, antialias = True, glOptions = 'additive', mode = 'lines')
         self.current_item["cone"] = self.draw_cone(u[0], u[1])
 
         for _, obj in self.current_item.items():
@@ -95,9 +95,9 @@ class View3D(gl.GLViewWidget):
             self.addItem(obj)
 
         c = (0.7, 0.7, 0.7, 0.35)
-        self.acc_item["head"] = gl.GLScatterPlotItem(pos = u[0], color=c, size = np.array([20.0]), glOptions = 'translucent')
-        self.acc_item["att"] = gl.GLScatterPlotItem(pos = u[1], color=c, size = np.array([1.0]), glOptions = 'translucent')
-        self.acc_item["vec"] = gl.GLLinePlotItem(pos = u, color =c, width= 3.0, antialias = True, glOptions = 'translucent')
+        self.acc_item["head"] = gl.GLScatterPlotItem(pos = u[0], color=c, size = np.array([20.0]), glOptions = 'additive')
+        self.acc_item["att"] = gl.GLScatterPlotItem(pos = u[1], color=c, size = np.array([1.0]), glOptions = 'additive')
+        self.acc_item["vec"] = gl.GLLinePlotItem(pos = u, color =c, width= 3.0, antialias = True, glOptions = 'additive', mode = 'lines')
         self.acc_item["cone"] = [] #self.draw_cone(u[0], u[1])
         #self.acc_item["cone"].setColor(c)
 
@@ -186,7 +186,7 @@ class View3D(gl.GLViewWidget):
         'glMaterialfv':( GL_FRONT_AND_BACK, GL_AMBIENT, (1.0, 1.0, 1.0, 1.0) ),
         'glMaterialfv':( GL_FRONT_AND_BACK, GL_DIFFUSE, (0.9, 0.9, 0.9, 1.0) ),
         'glMaterialfv':( GL_FRONT_AND_BACK, GL_SPECULAR, (0.17, 0.17, 0.17, 1) ),
-        'glMaterialf':( GL_FRONT_AND_BACK, GL_SHININESS, 1.45),
+        'glMaterialf':( GL_FRONT_AND_BACK, GL_SHININESS, 50.0),
 
         'glLight' : (GL_LIGHT0, GL_POSITION,  (-7, -7, 12, 1.0)), # point light from the left, top, front
         'glLightfv' : (GL_LIGHT0, GL_AMBIENT, (0.5, 0.5, 0.5, 1.0)),
@@ -202,8 +202,8 @@ class View3D(gl.GLViewWidget):
 
         
         mesh = trimesh.load_mesh(file)
-        mat_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/scene/LAB.obj')
-        mtl_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/scene/LAB.mtl')
+        mat_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/scene/Room.obj')
+        mtl_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/scene/Room.mtl')
         obj = OBJ(mat_file, swapyz=True)
         self.mtl_data = MTL(filename=mtl_file)
         self.addItem(self.mtl_data)
@@ -214,29 +214,41 @@ class View3D(gl.GLViewWidget):
         self.room_textured = []
         count = 0
         for name, ob in obj.content.items():
-            if "material" not in ob: continue
-                #print(name, np.array(ob["vertexes"]).shape)
+            if len(ob["material"]) == 0: 
+                print(name, np.array(ob["vertexes"]).shape)
+                continue
+                
                 #exit()
             #print(name)
-            mtl = self.mtl_data.contents[ob["material"]]
+
             vert = np.array(ob["vertexes"]).reshape(-1, 3)
             face = np.array(ob["faces"]).reshape(-1, 3)
-            color = np.array([mtl["Kd"][0], mtl["Kd"][1],mtl["Kd"][2], 1.0])
-            
-            if color[0] > 0.8 and color[1] > 0.8 and color[2] > 0.8:
-                color = np.array([0.65, 0.65, 0.65, 1.0])
+
+            mtl = self.mtl_data.contents[ob["material"][0]]
 
             if 'map_Kd' in  mtl:
                 #if "Carpet3.png" in mtl["map_Kd"] or "SquareMat2.png" in mtl["map_Kd"]:
-                texture = {"coords":np.array(ob["textures"]).reshape(-1, 2) , "name":ob["material"], "mtl":self.mtl_data.contents}
+                texture = {"coords":np.array(ob["textures"]).reshape(-1, 2) , "name":ob["material"][0], "mtl":self.mtl_data.contents}
                 mesh_data = gl.MeshData(vertexes=vert, faces=face)
                 element = GLMeshTexturedItem(meshdata=mesh_data, textures = texture, smooth=True, drawEdges=True, glOptions=option_gl)
                 element.parseMeshData()
                 self.room_textured.append(element)
                 self.addItem(element)
                 continue
+            color = []
+            counts = ob["count"]
+            counts.append(vert.shape[0])
+            counts = np.array(counts)
+            counts = counts[1:] - counts[:-1]
+            for m, n in zip(ob["material"], counts):
+                mtl= self.mtl_data.contents[m]
+                c = np.array([mtl["Kd"][0], mtl["Kd"][1],mtl["Kd"][2], 1.0])
+                if c[0] > 0.8 and c[1] > 0.8 and c[2] > 0.8:
+                    c = np.array([0.65, 0.65, 0.65, 1.0])
+                c = np.repeat(c[None,:], n, axis = 0)
+                color.append(c)
             #print(name, ob["material"], count, face[-1][-1])
-            color = np.repeat(color[None,:], vert.shape[0], axis = 0)
+            color = np.concatenate(color, axis = 0)
             vertices.append(vert)
             colors.append(color)
             faces.append(face + count)
@@ -426,17 +438,18 @@ class View3D(gl.GLViewWidget):
     def draw_skeleton(self):
         f = list(self.keypoints.keys())[0]
  
-        self.sk_point = gl.GLScatterPlotItem()
+        self.sk_point = gl.GLScatterPlotItem(glOptions = 'additive')
         c = np.array(CocoColors)/255.0
         r = np.copy(c[:,2])
         b = np.copy(c[:,0])
         c[:,0] = r
         c[:,2] = b
 
-        self.sk_point.setData(pos = self.keypoints[f]["p"], color=c, size = 10.0)
+        self.sk_point.setData(pos = self.keypoints[f]["p"], color=c, size = np.array([15.0]))
         self.addItem(self.sk_point)
 
-        self.sk_lines = gl.GLLinePlotItem(pos = self.keypoints[f]["l"], color = (1.0,0.0,0.0, 1.0), width= 3.0, antialias=True)
+        print(self.keypoints[f]["l"].shape)
+        self.sk_lines = gl.GLLinePlotItem(pos = self.keypoints[f]["l"], color = (1.0,0.0,0.0,1.0), width= 5.0, glOptions = 'additive', mode = 'lines')
         self.addItem(self.sk_lines)
         return
 
@@ -490,20 +503,24 @@ class View3D(gl.GLViewWidget):
         for f, p in data.items():
             bones = []
             for p1, p2 in SKELETON:
-                bones.append([p[p1], p[p2]])
-            output[f] = {"p":np.array(p), "l":np.array(bones)}
+                #bones.append([p[p1], p[p2]])
+                bones.append(p[p1])
+                bones.append(p[p2])
+            bones = np.array(bones)
+            output[f] = {"p":np.array(p), "l":bones}
         return output
 
     def draw_frame(self, f, plot_vec = False):
         if f is None:
-            f = self.current_item["frame"]                        
-        if f not in self.attention: 
-            return
-        
+            f = self.current_item["frame"]                              
+
         """if f in self.keypoints:
             self.sk_point.setData(pos = self.keypoints[f]["p"])
             self.sk_lines.setData(pos = self.keypoints[f]["l"])"""
-        
+
+        if f not in self.attention: 
+            return
+                
         att = self.attention[f]["att"]
         size_p = self.attention[f]["size"].reshape(1)
         old_u = self.current_item["att"].pos[0] - self.current_item["head"].pos[0]
@@ -542,7 +559,7 @@ class View3D(gl.GLViewWidget):
         if self.accumulate and f not in self.acc_item["frame"]:
             if len(self.acc_item["frame"]) == 0:
                 acc_heads = np.copy(head).reshape(1,3)
-                acc_vecs = np.copy(self.current_item["vec"].pos).reshape(1,2,3)
+                acc_vecs = np.copy(self.current_item["vec"].pos).reshape(2,3)
                 acc_att = np.copy(att).reshape(1,3)
                 acc_size = np.copy(size_p).reshape(1)
                 self.acc_item["head"].setVisible(True)
@@ -550,7 +567,7 @@ class View3D(gl.GLViewWidget):
                 self.acc_item["att"].setVisible(True)
             else:
                 acc_heads = np.concatenate([np.copy(self.acc_item["head"].pos), np.copy(head).reshape(1,3)])
-                acc_vecs = np.concatenate([np.copy(self.acc_item["vec"].pos), np.copy(self.current_item["vec"].pos).reshape(1,2,3)])
+                acc_vecs = np.concatenate([np.copy(self.acc_item["vec"].pos), np.copy(self.current_item["vec"].pos).reshape(2,3)])
                 acc_att = np.concatenate([np.copy(self.acc_item["att"].pos), np.copy(att).reshape(1,3)])
                 acc_size = np.concatenate([np.copy(self.acc_item["att"].size) , np.copy(size_p).reshape(1)])
 

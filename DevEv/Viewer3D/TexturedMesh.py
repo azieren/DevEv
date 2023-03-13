@@ -1,5 +1,6 @@
 import pkg_resources
 from OpenGL.GL import *  # noqa
+from OpenGL.GLU import *
 import numpy as np
 import cv2 
 from PyQt5 import QtGui
@@ -29,13 +30,64 @@ class MTL(GLGraphicsItem.GLGraphicsItem):
             elif mtl is None:
                 raise ValueError
             elif values[0] == 'map_Kd':
+                # extract the texture file path and offset values from the line
+                path = values[-1]
+                offset = [0.0, 0.0, 0.0]
+                scale = [1.0, 1.0, 1.0]
+                for i in range(1, len(values) - 1):
+                    if values[i] == '-s':
+                        offset = [float(values[i+1]), float(values[i+2]), float(values[i+3])]
+                    elif values[i] == '-o':
+                        scale = [float(values[i+1]), float(values[i+2]), float(values[i+3])]
+
+
                 # load the texture referred to by this declaration
-                mtl[values[0]] = pkg_resources.resource_filename('DevEv', os.path.join('metadata/RoomData/scene/', values[1].replace("\\","/")))
+                mtl[values[0]] = {
+                    'path': pkg_resources.resource_filename('DevEv', os.path.join('metadata/RoomData/scene/', path.replace("\\","/"))),
+                    'offset': offset,
+                    'scale': scale
+                }
 
             else:
                 mtl[values[0]] = [float(x) for x  in values[1:]]
-   
+
     def initializeGL(self):  
+        ids = {}
+        
+        #glEnable(GL_TEXTURE_2D)
+        for k, v in self.contents.items():
+            if not type(v) == dict: continue
+            if not 'map_Kd' in v: continue
+            path = v['map_Kd']["path"]
+            if path in ids: 
+                v['texture_Kd'] = ids[path]
+                continue
+            image = cv2.cvtColor( cv2.imread(path),  cv2.COLOR_BGR2RGB)
+            image = cv2.flip(image, 0)
+            #image = imageio.imread(path)
+            image = makeRGBA(image)[0]
+            image[:,:,3] = 255
+            shape = image.shape
+            texid = v['texture_Kd'] = glGenTextures(1)
+            ids[path] = texid
+            print(path, shape, texid)
+
+            glBindTexture(GL_TEXTURE_2D, texid)
+            data = np.ascontiguousarray(image)
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,  shape[1], shape[0], 0, GL_RGBA, GL_UNSIGNED_BYTE, data)
+
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+            #glBindTexture(GL_TEXTURE_2D, 0)
+            # Set the texture coordinate generation coefficients using glTexGenfv
+            glTexGenfv(GL_S, GL_OBJECT_PLANE, [1.0, 0.0, 0.0, v['map_Kd']['offset'][0]])
+            glTexGenfv(GL_T, GL_OBJECT_PLANE, [0.0, 1.0, 0.0, v['map_Kd']['offset'][1]])
+
+
+        
+    def initializeGLOld(self):  
         ids = {}    
         glEnable(GL_TEXTURE_2D)
         for k, v in self.contents.items():
@@ -54,12 +106,16 @@ class MTL(GLGraphicsItem.GLGraphicsItem):
             ids[path] = texid
             print(path, shape, texid)
             glBindTexture(GL_TEXTURE_2D, texid)
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-                GL_LINEAR)
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-                GL_LINEAR)
+
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
+
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
             #glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER)
             #glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER)
+
+
 
             #glTexImage2D(GL_PROXY_TEXTURE_2D, 0, GL_RGBA, shape[0], shape[1], 0, GL_RGBA, GL_UNSIGNED_BYTE, None)
             """if glGetTexLevelParameteriv(GL_PROXY_TEXTURE_2D, 0, GL_TEXTURE_WIDTH) == 0:
@@ -72,7 +128,7 @@ class MTL(GLGraphicsItem.GLGraphicsItem):
         return 
 
     def paint(self): 
-        glDisable(GL_TEXTURE_2D)
+        #glDisable(GL_TEXTURE_2D)
         return
 
 class OBJ:
@@ -91,7 +147,7 @@ class OBJ:
             if not values: continue
             if values[0] == 'o':
                 curr = values[1]
-                self.content[curr] = {"vertexes":[], "textures":[], "faces":[], "normals":[]}
+                self.content[curr] = {"vertexes":[], "textures":[], "faces":[], "normals":[], "material":[], "count":[]}
                 count = 0
             if values[0] == 'v':
                 #v = map(float, values[1:4])
@@ -106,9 +162,12 @@ class OBJ:
                     v = v[0], -v[2], v[1]
                 normals.append(v)
             elif values[0] == 'vt':
-                textures.append([float(x) for x in values[1:3]])
+                vt = [float(x) for x in values[1:3]]
+                #vt = 1-vt[1], vt[0]
+                textures.append(vt)
             elif values[0] in ('usemtl', 'usemat'):
-                self.content[curr]["material"] = values[1]
+                self.content[curr]["material"].append(values[1])
+                self.content[curr]["count"].append(len(self.content[curr]["vertexes"]))
             elif values[0] == 'mtllib':
                 self.mtl = os.path.join(dirname ,values[1])
             elif values[0] == 'f':
@@ -125,7 +184,7 @@ class OBJ:
                     if len(w) >= 3 and len(w[2]) > 0:
                         norms.append(int(w[2]))
                     else:
-                        norms.append(0)
+                        norms.append(0)                
                 self.content[curr]["vertexes"].extend([vertices[x-1]  for x in face])
                 self.content[curr]["textures"].extend([textures[x-1] for x in texcoords_])                
                 self.content[curr]["normals"].extend([normals[x-1]  for x in norms])
@@ -328,11 +387,16 @@ class GLMeshTexturedItem(GLGraphicsItem.GLGraphicsItem):
                             glEnableClientState(GL_COLOR_ARRAY)
                             glColorPointerf(color)
                     else:
+                        mtl = self.textures["mtl"][self.textures['name']]
+
                         glEnableClientState(GL_TEXTURE_COORD_ARRAY)
-                        glTexCoordPointerf(self.textures["coords"])
-                        #print(self.textures['name'], self.textures["mtl"][self.textures['name']])
-                        glBindTexture(GL_TEXTURE_2D, self.textures["mtl"][self.textures['name']]['texture_Kd'])
-                    
+                        scale = np.array(mtl['map_Kd']['scale'])
+                        offset = np.array(mtl['map_Kd']['offset'])
+                        t = np.array(self.textures["coords"]) / scale[:2] - offset[:2]/scale[:2]
+
+                        glTexCoordPointerf(t)
+                        glBindTexture(GL_TEXTURE_2D, mtl['texture_Kd'])
+
                     if norms is not None:
                         glEnableClientState(GL_NORMAL_ARRAY)
                         glNormalPointerf(norms)
@@ -348,6 +412,9 @@ class GLMeshTexturedItem(GLGraphicsItem.GLGraphicsItem):
                     glDisableClientState(GL_COLOR_ARRAY)
                     glDisableClientState(GL_TEXTURE_COORD_ARRAY)
                     glDisable(GL_TEXTURE_2D)
+                    glDisable(GL_TEXTURE_GEN_S)
+                    glDisable(GL_TEXTURE_GEN_T)
+                    glBindTexture(GL_TEXTURE_2D, 0)
 
            
         if self.opts['drawEdges']:
@@ -373,5 +440,5 @@ class GLMeshTexturedItem(GLGraphicsItem.GLGraphicsItem):
                 glDisableClientState(GL_COLOR_ARRAY)
 
 if __name__ == '__main__':
-    content = MTL("DevEv/metadata/RoomData/scene/LAB.mtl")
+    content = MTL("DevEv/metadata/RoomData/scene/Room.mtl")
     print(content.keys())

@@ -105,8 +105,9 @@ class VideoApp(QWidget):
         self.thread.get_image(self.last_position)
 
     def stop_video(self):
-        self.thread.terminate()
-        self.thread.wait()
+        if self.thread.isRunning():
+            self.thread.terminate()
+            self.thread.wait()
         self.thread._run_flag = False
 
     def start_video(self):
@@ -115,7 +116,6 @@ class VideoApp(QWidget):
         self.thread.start()
 
     def closeEvent(self, event):
-        print("Here closing")
         self.stop_video()
         self.thread.close()
         event.accept()
