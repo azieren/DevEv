@@ -498,6 +498,7 @@ class View3D(gl.GLViewWidget):
         return attention
 
     def read_keypoints(self, filename):
+        if not os.path.exists(filename): return {}
         output = {}
         data = np.load(filename, allow_pickle=True).item()
         for f, p in data.items():
