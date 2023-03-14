@@ -77,8 +77,8 @@ class View3D(gl.GLViewWidget):
         self.mesh = self.read_room(room_file)
         att_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/attention.txt')
         self.attention = self.read_attention(att_file)
-        self.keypoints = self.read_keypoints("DevEv/data_2.6d_DevEv_S07_04.npy")
-        #self.draw_skeleton()
+        self.keypoints = self.read_keypoints("DevEv/data_2.7d_DevEv_S07_04.npy")
+        self.draw_skeleton()
         self.init()
         return
 
@@ -502,6 +502,7 @@ class View3D(gl.GLViewWidget):
         output = {}
         data = np.load(filename, allow_pickle=True).item()
         for f, p in data.items():
+            if len(p) == 0: continue
             bones = []
             for p1, p2 in SKELETON:
                 #bones.append([p[p1], p[p2]])
@@ -515,9 +516,9 @@ class View3D(gl.GLViewWidget):
         if f is None:
             f = self.current_item["frame"]                              
 
-        """if f in self.keypoints:
+        if f in self.keypoints:
             self.sk_point.setData(pos = self.keypoints[f]["p"])
-            self.sk_lines.setData(pos = self.keypoints[f]["l"])"""
+            self.sk_lines.setData(pos = self.keypoints[f]["l"])
 
         if f not in self.attention: 
             return
