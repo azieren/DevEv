@@ -1,7 +1,7 @@
-# Blender 3.1.0 MTL File: 'Room_test.blend'
+# Blender 3.1.0 MTL File: 'Room_v2.blend'
 # www.blender.org
 
-newmtl AppleGreenMatte.002
+newmtl AppleGreenMatte
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.587900 1.000000 0.254900
@@ -11,7 +11,7 @@ Ni 1.450000
 d 1.000000
 illum 2
 
-newmtl BabyBlue.002
+newmtl BabyBlue
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.695800 0.826900 0.933800
@@ -21,7 +21,7 @@ Ni 1.450000
 d 1.000000
 illum 2
 
-newmtl Beidge.002
+newmtl Beidge
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 1.000000 0.983900 0.686200
@@ -31,7 +31,7 @@ Ni 1.450000
 d 1.000000
 illum 2
 
-newmtl BlackMatte.002
+newmtl BlackMatte
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.000000 0.000000 0.000000
@@ -41,7 +41,7 @@ Ni 1.450000
 d 1.000000
 illum 2
 
-newmtl BlackMetal.002
+newmtl BlackMetal
 Ns 200.000000
 Ka 0.500000 0.500000 0.500000
 Kd 0.000000 0.000000 0.000000
@@ -51,7 +51,7 @@ Ni 1.450000
 d 1.000000
 illum 3
 
-newmtl BlackRubber.002
+newmtl BlackRubber
 Ns 63.117920
 Ka 0.500000 0.500000 0.500000
 Kd 0.140000 0.140000 0.140000
@@ -61,7 +61,7 @@ Ni 1.450000
 d 1.000000
 illum 3
 
-newmtl BlueRubber.002
+newmtl BlueRubber
 Ns 63.117920
 Ka 0.500000 0.500000 0.500000
 Kd 0.000000 0.026200 0.254300
@@ -71,7 +71,7 @@ Ni 1.450000
 d 1.000000
 illum 3
 
-newmtl BuleMetal.002
+newmtl BuleMetal
 Ns 200.000000
 Ka 0.500000 0.500000 0.500000
 Kd 0.193900 0.277100 0.470900
@@ -81,7 +81,7 @@ Ni 1.450000
 d 1.000000
 illum 3
 
-newmtl Carpet.002
+newmtl Carpet
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 1.000000 1.000000 1.000000
@@ -92,7 +92,7 @@ d 1.000000
 illum 2
 map_Kd  -o 0.0142857 0.0142857 1 Textures\Carpet2.jpg
 
-newmtl CheckPattern.002
+newmtl CheckPattern
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 1.000000 1.000000 1.000000
@@ -101,9 +101,9 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd  -s 0.02 0.02 0 -o 0.217 0.217 1 Textures\SquareMat.png
+map_Kd  -s 0.03 0.03 0 -o 0.215 0.215 1 Textures\SquareMat.png
 
-newmtl Coach.002
+newmtl Coach
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.872000 0.837500 0.666800
@@ -113,7 +113,7 @@ Ni 1.450000
 d 1.000000
 illum 2
 
-newmtl ComputerScreen.002
+newmtl ComputerScreen
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 1.000000 1.000000 1.000000
@@ -123,7 +123,7 @@ Ni 1.450000
 d 1.000000
 illum 2
 
-newmtl DarkRedMatte.002
+newmtl DarkRedMatte
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.272300 0.036200 0.000000
@@ -133,7 +133,7 @@ Ni 1.450000
 d 1.000000
 illum 2
 
-newmtl Default_Material.002
+newmtl Default_Material
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.500000 0.500000 0.500000
@@ -143,7 +143,7 @@ Ni 1.450000
 d 1.000000
 illum 2
 
-newmtl GrassGreenMatte.002
+newmtl GrassGreenMatte
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.302500 0.933800 0.000000
@@ -153,7 +153,7 @@ Ni 1.450000
 d 1.000000
 illum 2
 
-newmtl GreenCarpet.002
+newmtl GreenCarpet
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.107100 0.237500 0.177400
@@ -163,7 +163,7 @@ Ni 1.450000
 d 1.000000
 illum 2
 
-newmtl GreenMatte.002
+newmtl GreenMatte
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.495225 0.752000 0.357952
@@ -173,7 +173,7 @@ Ni 1.450000
 d 1.000000
 illum 2
 
-newmtl GreenMatte1.002
+newmtl GreenMatte1
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.053400 0.272300 0.068800
@@ -183,7 +183,7 @@ Ni 1.450000
 d 1.000000
 illum 2
 
-newmtl GreenMetal.002
+newmtl GreenMetal
 Ns 200.000000
 Ka 0.500000 0.500000 0.500000
 Kd 0.003800 0.032300 0.014300
@@ -193,7 +193,7 @@ Ni 1.450000
 d 1.000000
 illum 3
 
-newmtl GreenRubber.002
+newmtl GreenRubber
 Ns 63.117920
 Ka 0.500000 0.500000 0.500000
 Kd 0.030800 0.254300 0.024900
@@ -203,7 +203,7 @@ Ni 1.450000
 d 1.000000
 illum 3
 
-newmtl GreyMatte.002
+newmtl GreyMatte
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.500000 0.500000 0.500000
@@ -213,7 +213,7 @@ Ni 1.450000
 d 1.000000
 illum 2
 
-newmtl GreyMetal.002
+newmtl GreyMetal
 Ns 200.000000
 Ka 0.500000 0.500000 0.500000
 Kd 0.500000 0.500000 0.500000
@@ -223,7 +223,7 @@ Ni 1.450000
 d 1.000000
 illum 3
 
-newmtl GymMat.002
+newmtl GymMat
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.126400 0.151200 0.358100
@@ -233,7 +233,7 @@ Ni 1.450000
 d 1.000000
 illum 2
 
-newmtl Honey.002
+newmtl Honey
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.312300 0.228100 0.097900
@@ -243,7 +243,7 @@ Ni 1.450000
 d 1.000000
 illum 2
 
-newmtl LightBlueMatte.002
+newmtl LightBlueMatte
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.431300 0.739900 1.000000
@@ -253,7 +253,7 @@ Ni 1.450000
 d 1.000000
 illum 2
 
-newmtl LightBlueRubber.002
+newmtl LightBlueRubber
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.136000 0.279000 0.578300
@@ -263,7 +263,7 @@ Ni 1.450000
 d 1.000000
 illum 2
 
-newmtl LightPink.002
+newmtl LightPink
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.710100 0.473400 0.687300
@@ -273,7 +273,7 @@ Ni 1.450000
 d 1.000000
 illum 2
 
-newmtl LightWood.002
+newmtl LightWood
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 1.000000 1.000000 1.000000
@@ -284,7 +284,7 @@ d 1.000000
 illum 2
 map_Kd  -s 20 0 0 -o 0.05 0.05 1 Textures\Wood3.jpg
 
-newmtl MidBlueMatte.002
+newmtl MidBlueMatte
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.097900 0.364400 1.000000
@@ -294,7 +294,7 @@ Ni 1.450000
 d 1.000000
 illum 2
 
-newmtl MidGreenMatte.002
+newmtl MidGreenMatte
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.230500 0.383500 0.135300
@@ -304,7 +304,7 @@ Ni 1.450000
 d 1.000000
 illum 2
 
-newmtl OrangeMatte.002
+newmtl OrangeMatte
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 1.000000 0.458500 0.000000
@@ -314,7 +314,7 @@ Ni 1.450000
 d 1.000000
 illum 2
 
-newmtl OrangeMetal.002
+newmtl OrangeMetal
 Ns 200.000000
 Ka 0.500000 0.500000 0.500000
 Kd 0.504300 0.251300 0.088900
@@ -324,7 +324,7 @@ Ni 1.450000
 d 1.000000
 illum 3
 
-newmtl OrangeRubber.002
+newmtl OrangeRubber
 Ns 63.117920
 Ka 0.500000 0.500000 0.500000
 Kd 1.000000 0.493700 0.000000
@@ -334,7 +334,7 @@ Ni 1.450000
 d 1.000000
 illum 3
 
-newmtl Picture1.002
+newmtl Picture1
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 1.000000 1.000000 1.000000
@@ -345,7 +345,7 @@ d 1.000000
 illum 2
 map_Kd  -o 0.2 0.25 1 Textures\Painting1.png
 
-newmtl Picture2.002
+newmtl Picture2
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 1.000000 1.000000 1.000000
@@ -356,7 +356,7 @@ d 1.000000
 illum 2
 map_Kd  -o 0.294118 0.25 1 Textures\Picture2.png
 
-newmtl Picture3.002
+newmtl Picture3
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 1.000000 1.000000 1.000000
@@ -367,7 +367,7 @@ d 1.000000
 illum 2
 map_Kd  -o 0.294118 0.25 1 Textures\Picture1.png
 
-newmtl Picture4.002
+newmtl Picture4
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 1.000000 1.000000 1.000000
@@ -378,7 +378,7 @@ d 1.000000
 illum 2
 map_Kd  -o 0.3125 0.25 1 Textures\Painting2.png
 
-newmtl PinkBall.002
+newmtl PinkBall
 Ns 200.000000
 Ka 0.500000 0.500000 0.500000
 Kd 0.853500 0.410300 0.872000
@@ -388,7 +388,7 @@ Ni 1.450000
 d 1.000000
 illum 3
 
-newmtl PinkMatte.002
+newmtl PinkMatte
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.710100 0.250600 0.617700
@@ -398,7 +398,7 @@ Ni 1.450000
 d 1.000000
 illum 2
 
-newmtl PinkWall.002
+newmtl PinkWall
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.872000 0.811300 0.735200
@@ -408,7 +408,7 @@ Ni 1.450000
 d 1.000000
 illum 2
 
-newmtl PressureMat.002
+newmtl PressureMat
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 1.000000 1.000000 1.000000
@@ -419,7 +419,7 @@ d 0.982249
 illum 9
 map_Kd  -o 0.05 0.05 1 Textures\PressureMat.jpg
 
-newmtl PupleRubber.002
+newmtl PupleRubber
 Ns 63.117920
 Ka 0.500000 0.500000 0.500000
 Kd 0.000000 0.000800 0.118000
@@ -429,7 +429,7 @@ Ni 1.450000
 d 1.000000
 illum 3
 
-newmtl PurpleMatte.002
+newmtl PurpleMatte
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.135400 0.091000 0.193400
@@ -439,7 +439,7 @@ Ni 1.450000
 d 1.000000
 illum 2
 
-newmtl RedMatte.002
+newmtl RedMatte
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 1.000000 0.122500 0.000000
@@ -449,7 +449,7 @@ Ni 1.450000
 d 1.000000
 illum 2
 
-newmtl RedMatte1.002
+newmtl RedMatte1
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.254300 0.014900 0.014900
@@ -459,7 +459,7 @@ Ni 1.450000
 d 1.000000
 illum 2
 
-newmtl RedMetel.002
+newmtl RedMetel
 Ns 200.000000
 Ka 0.500000 0.500000 0.500000
 Kd 0.540000 0.048500 0.010500
@@ -469,7 +469,7 @@ Ni 1.450000
 d 1.000000
 illum 3
 
-newmtl RedPlastic.002
+newmtl RedPlastic
 Ns 63.117920
 Ka 0.500000 0.500000 0.500000
 Kd 0.814300 0.191400 0.095800
@@ -479,7 +479,7 @@ Ni 1.450000
 d 1.000000
 illum 3
 
-newmtl RedRubber.002
+newmtl RedRubber
 Ns 63.117920
 Ka 0.500000 0.500000 0.500000
 Kd 0.578300 0.120100 0.045300
@@ -489,7 +489,7 @@ Ni 1.450000
 d 1.000000
 illum 3
 
-newmtl RoyalBlueMatte.002
+newmtl RoyalBlueMatte
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.043400 0.071800 0.221800
@@ -499,7 +499,7 @@ Ni 1.450000
 d 1.000000
 illum 2
 
-newmtl ShineMetle.002
+newmtl ShineMetle
 Ns 200.000000
 Ka 0.500000 0.500000 0.500000
 Kd 0.717000 0.717000 0.717000
@@ -509,7 +509,7 @@ Ni 1.450000
 d 1.000000
 illum 3
 
-newmtl TealBlueMatte.002
+newmtl TealBlueMatte
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.083100 0.354000 0.470900
@@ -519,7 +519,7 @@ Ni 1.450000
 d 1.000000
 illum 2
 
-newmtl TealBluePlastic.002
+newmtl TealBluePlastic
 Ns 200.000000
 Ka 0.500000 0.500000 0.500000
 Kd 0.264500 0.596100 0.710100
@@ -529,7 +529,7 @@ Ni 1.450000
 d 1.000000
 illum 3
 
-newmtl TransparentMatte.002
+newmtl TransparentMatte
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.500000 0.500000 0.500000
@@ -539,7 +539,7 @@ Ni 1.450000
 d 0.502959
 illum 9
 
-newmtl TransparentYellow.002
+newmtl TransparentYellow
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.663100 0.599300 0.221000
@@ -549,7 +549,7 @@ Ni 1.450000
 d 0.698225
 illum 9
 
-newmtl TransprantBall.002
+newmtl TransprantBall
 Ns 200.000000
 Ka 0.500000 0.500000 0.500000
 Kd 1.000000 1.000000 1.000000
@@ -559,7 +559,7 @@ Ni 1.450000
 d 0.485207
 illum 6
 
-newmtl Walkway.002
+newmtl Walkway
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 1.000000 1.000000 1.000000
@@ -570,7 +570,7 @@ d 1.000000
 illum 2
 map_Kd  -o 0.02 0.0111111 1 Textures\Walkway.png
 
-newmtl Walkway2.002
+newmtl Walkway2
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 1.000000 1.000000 1.000000
@@ -581,7 +581,7 @@ d 1.000000
 illum 2
 map_Kd  -o 0.1 0.1 1 Textures\Walkway.png
 
-newmtl WhiteLight.002
+newmtl WhiteLight
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 1.000000 1.000000 1.000000
@@ -591,7 +591,7 @@ Ni 1.450000
 d 0.763314
 illum 9
 
-newmtl WhitePlastic.002
+newmtl WhitePlastic
 Ns 200.000000
 Ka 0.500000 0.500000 0.500000
 Kd 1.000000 1.000000 1.000000
@@ -601,7 +601,7 @@ Ni 1.450000
 d 1.000000
 illum 3
 
-newmtl WhiteScreen.002
+newmtl WhiteScreen
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 1.000000 1.000000 1.000000
@@ -611,7 +611,7 @@ Ni 1.450000
 d 1.000000
 illum 2
 
-newmtl Wood1.002
+newmtl Wood1
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 1.000000 1.000000 1.000000
@@ -622,7 +622,7 @@ d 1.000000
 illum 2
 map_Kd  -s 1 0 0 -o 1 0.5 1 Textures\Wood2.jpg
 
-newmtl Wood2.002
+newmtl Wood2
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 1.000000 1.000000 1.000000
@@ -633,7 +633,7 @@ d 1.000000
 illum 2
 map_Kd  -o 0.2 0.1 1 Textures\Wood1.jpg
 
-newmtl YellowPlastic.002
+newmtl YellowPlastic
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.933800 0.782500 0.219700
@@ -643,7 +643,7 @@ Ni 1.450000
 d 1.000000
 illum 2
 
-newmtl YellowRubber.002
+newmtl YellowRubber
 Ns 63.117920
 Ka 0.500000 0.500000 0.500000
 Kd 1.000000 0.787100 0.000000
@@ -653,10 +653,40 @@ Ni 1.450000
 d 1.000000
 illum 3
 
-newmtl lambert1.002
+newmtl lambert1
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
 Kd 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+
+newmtl lambert1.016
+Ns 200.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.500000 0.500000 0.500000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+
+newmtl lambert1.017
+Ns 200.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.500000 0.500000 0.500000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+
+newmtl lambert45
+Ns 200.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.500000 0.500000 0.500000
 Ks 0.500000 0.500000 0.500000
 Ke 0.000000 0.000000 0.000000
 Ni 1.450000

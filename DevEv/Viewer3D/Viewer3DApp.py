@@ -436,7 +436,9 @@ class View3D(gl.GLViewWidget):
         return d, offset
 
     def draw_skeleton(self):
-        f = list(self.keypoints.keys())[0]
+        f = list(self.keypoints.keys())
+        if len(f) == 0: return
+        f = f[0]
  
         self.sk_point = gl.GLScatterPlotItem(glOptions = 'additive')
         c = np.array(CocoColors)/255.0
