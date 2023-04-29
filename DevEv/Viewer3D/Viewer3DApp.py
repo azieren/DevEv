@@ -448,10 +448,12 @@ class View3D(gl.GLViewWidget):
         c[:,2] = b
 
         self.sk_point.setData(pos = self.keypoints[f]["p"], color=c, size = np.array([15.0]))
+        self.sk_point.setVisible(False)
         self.addItem(self.sk_point)
 
         print(self.keypoints[f]["l"].shape)
         self.sk_lines = gl.GLLinePlotItem(pos = self.keypoints[f]["l"], color = (1.0,0.0,0.0,1.0), width= 5.0, glOptions = 'additive', mode = 'lines')
+        self.sk_lines.setVisible(False)
         self.addItem(self.sk_lines)
         return
 
