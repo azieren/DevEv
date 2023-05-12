@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="DevEv",
-    version="0.0.52",
+    version="0.0.55",
     url="https://github.com/azieren/DevEv",
     author="Nicolas Aziere",
     author_email="nicolas.aziere@gmail.com",

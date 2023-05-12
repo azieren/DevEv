@@ -70,6 +70,7 @@ class View3D(gl.GLViewWidget):
         self.add_Head = True
         self.click_enable = False
         self.corrected_frames = set()
+        self.default_length = 0.5
 
         #plane_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/room_setup2.json')
         #self.plane_dict = self.read_planes(plane_file)
@@ -82,11 +83,24 @@ class View3D(gl.GLViewWidget):
         self.init()
         return
 
+    def reset(self):
+        """
+        Initialize the widget state or reset the current state to the original state.
+        """
+        self.opts['center'] = QVector3D(0,0,0)  ## will always appear at the center of the widget
+        self.opts['distance'] = 20.0         ## distance of camera from center
+        self.opts['fov'] = 40                ## horizontal field of view in degrees
+        self.opts['elevation'] = 90          ## camera's angle of elevation in degrees
+        self.opts['azimuth'] = 0            ## camera's azimuthal angle in degrees 
+                                             ## (rotation around z-axis 0 points along x-axis)
+        self.opts['viewport'] = None         ## glViewport params; None == whole widget
+        self.setBackgroundColor(pg.getConfigOption('background'))
+        
     def init(self):
         u =  np.array([[0.0,0.0,0.0], [0.0,0.0,1.0]])
-        self.current_item["head"] = gl.GLScatterPlotItem(pos = u[0].reshape(1,3), color=self.base_color, size = np.array([20.0]),  glOptions = 'additive')
+        self.current_item["head"] = gl.GLScatterPlotItem(pos = u[0].reshape(1,3), color=self.base_color, size = np.array([15.0]),  glOptions = 'additive')
         self.current_item["att"] = gl.GLScatterPlotItem(pos = u[1].reshape(1,3), color=self.base_color, size = np.array([1.0]), glOptions = 'additive')
-        self.current_item["vec"] = gl.GLLinePlotItem(pos = u, color = np.array([self.base_color, self.base_color2]), width= 3.0, antialias = True, glOptions = 'additive', mode = 'lines')
+        self.current_item["vec"] = gl.GLLinePlotItem(pos = u, color = np.array([self.base_color, self.base_color2]), width= 5.0, antialias = True, glOptions = 'additive', mode = 'lines')
         self.current_item["cone"] = self.draw_cone(u[0], u[1])
 
         for _, obj in self.current_item.items():
@@ -95,7 +109,7 @@ class View3D(gl.GLViewWidget):
             self.addItem(obj)
 
         c = (0.7, 0.7, 0.7, 0.35)
-        self.acc_item["head"] = gl.GLScatterPlotItem(pos = u[0], color=c, size = np.array([20.0]), glOptions = 'additive')
+        self.acc_item["head"] = gl.GLScatterPlotItem(pos = u[0], color=c, size = np.array([15.0]), glOptions = 'additive')
         self.acc_item["att"] = gl.GLScatterPlotItem(pos = u[1], color=c, size = np.array([1.0]), glOptions = 'additive')
         self.acc_item["vec"] = gl.GLLinePlotItem(pos = u, color =c, width= 3.0, antialias = True, glOptions = 'additive', mode = 'lines')
         self.acc_item["cone"] = [] #self.draw_cone(u[0], u[1])
@@ -186,14 +200,14 @@ class View3D(gl.GLViewWidget):
         'glMaterialfv':( GL_FRONT_AND_BACK, GL_AMBIENT, (1.0, 1.0, 1.0, 1.0) ),
         'glMaterialfv':( GL_FRONT_AND_BACK, GL_DIFFUSE, (0.9, 0.9, 0.9, 1.0) ),
         'glMaterialfv':( GL_FRONT_AND_BACK, GL_SPECULAR, (0.17, 0.17, 0.17, 1) ),
-        'glMaterialf':( GL_FRONT_AND_BACK, GL_SHININESS, 50.0),
+        'glMaterialf':( GL_FRONT_AND_BACK, GL_SHININESS, 40.0),
 
-        'glLight' : (GL_LIGHT0, GL_POSITION,  (-7, -7, 12, 1.0)), # point light from the left, top, front
+        'glLight' : (GL_LIGHT0, GL_POSITION,  (0.7, -1.6, 2.0, 1.0)), # point light from the left, top, front
         'glLightfv' : (GL_LIGHT0, GL_AMBIENT, (0.5, 0.5, 0.5, 1.0)),
         'glLightfv': (GL_LIGHT0, GL_DIFFUSE, (1, 1, 1, 1)),
         'glLightfv': (GL_LIGHT0, GL_SPECULAR, (0.5, 0.5, 0.5, 1)),
 
-        'glLight' : (GL_LIGHT1, GL_POSITION,  (7, 10, 12, 1.0)), # point light from the left, top, front
+        'glLight' : (GL_LIGHT1, GL_POSITION,  (-1.8, 2.7, 2.0, 1.0)), # point light from the left, top, front
         'glLightfv' : (GL_LIGHT1, GL_AMBIENT, (0.5, 0.5, 0.5, 1.0)),
         'glLightfv': (GL_LIGHT1, GL_DIFFUSE, (1, 1, 1, 1.0)),
         'glLightfv': (GL_LIGHT1, GL_SPECULAR, (0.5, 0.5, 0.5, 1)),
@@ -244,7 +258,9 @@ class View3D(gl.GLViewWidget):
                 mtl= self.mtl_data.contents[m]
                 c = np.array([mtl["Kd"][0], mtl["Kd"][1],mtl["Kd"][2], 1.0])
                 if c[0] > 0.8 and c[1] > 0.8 and c[2] > 0.8:
-                    c = np.array([0.65, 0.65, 0.65, 1.0])
+                    c = np.array(c - np.array([0.1,0.1,0.1,0.0]))
+                if "pCube13" in name:
+                    c = np.array(np.array([0.5,0.5,0.5,0.9]))
                 c = np.repeat(c[None,:], n, axis = 0)
                 color.append(c)
             #print(name, ob["material"], count, face[-1][-1])
@@ -311,7 +327,6 @@ class View3D(gl.GLViewWidget):
 
         return None
 
-
     def setRoomStyle(self, view):
         if view == 0:
             self.clearRoom(True)
@@ -353,7 +368,7 @@ class View3D(gl.GLViewWidget):
             obj.setVisible(not state)
         return
 
-    def draw_cone(self, p0, p1, L = 8.0, n=8, R= 1.5):
+    def draw_cone(self, p0, p1, L = 3.0, n=8, R= 1.5):
         # vector in direction of axis
         R0, R1 = 0, R
         v = p1 - p0
@@ -389,7 +404,7 @@ class View3D(gl.GLViewWidget):
         cone = gl.GLMeshItem(meshdata=d, glOptions = 'additive', drawEdges=True, computeNormals=False, color=self.base_color)   
         return cone
 
-    def draw_Ncone(self, p0_list, p1_list, L = 8.0, n=8, R= 1.5):
+    def draw_Ncone(self, p0_list, p1_list, L = 3.0, n=8, R= 1.5):
         # vector in direction of axis
         R0, R1 = 0, R
         
@@ -447,12 +462,12 @@ class View3D(gl.GLViewWidget):
         c[:,0] = r
         c[:,2] = b
 
-        self.sk_point.setData(pos = self.keypoints[f]["p"], color=c, size = np.array([15.0]))
+        self.sk_point.setData(pos = self.keypoints[f]["p"], color=c, size = np.array([10.0]))
         self.sk_point.setVisible(False)
         self.addItem(self.sk_point)
 
         print(self.keypoints[f]["l"].shape)
-        self.sk_lines = gl.GLLinePlotItem(pos = self.keypoints[f]["l"], color = (1.0,0.0,0.0,1.0), width= 5.0, glOptions = 'additive', mode = 'lines')
+        self.sk_lines = gl.GLLinePlotItem(pos = self.keypoints[f]["l"], color = (1.0,0.0,0.0,1.0), width= 3.0, glOptions = 'additive', mode = 'lines')
         self.sk_lines.setVisible(False)
         self.addItem(self.sk_lines)
         return
@@ -485,8 +500,8 @@ class View3D(gl.GLViewWidget):
                 attention[int(frame)] = np.copy(attention[int(frame) - 1])
                 continue
             vec = (pos - b)/ ( size + 1e-6)
-            att_vec = np.array([b, b + 5.0*vec]) 
-            size = np.clip(size*4.0, 10.0, 80.0)
+            att_vec = np.array([b, b + self.default_length*vec]) 
+            size = np.clip(size*2.0, 5.0, 60.0)
             attention[int(frame)] = {"u":att_vec, "line":att_line, "head":b, "att":pos,
                                     "c_time":color_time, "size":size, "corrected_flag":flag}
             if flag: self.corrected_frames.add(int(frame))
@@ -646,7 +661,7 @@ class View3D(gl.GLViewWidget):
                 item = gl.GLMeshItem(meshdata=d, glOptions = 'translucent', drawEdges=True, antialias=True, computeNormals=False)   
             else:    
                 color = np.repeat(color, 2, axis=0)
-                item = gl.GLLinePlotItem(pos = vecs, color = color, width= 5.0, antialias=True, glOptions='translucent', mode='lines')
+                item = gl.GLLinePlotItem(pos = vecs, color = color, width= self.default_length, antialias=True, glOptions='translucent', mode='lines')
             
             if self.line_type != 3: 
                 self.drawn_t_item = item
@@ -762,7 +777,7 @@ class View3D(gl.GLViewWidget):
                     t = j/40.0
                     p = p1 * t + p2*(1-t)
                     vec = (p - p0)/ np.linalg.norm(p - p0)
-                    att_vec = np.array([p0, p0 + 5.0*vec]) 
+                    att_vec = np.array([p0, p0 + self.default_length*vec]) 
                     new_lines.append(att_vec)
 
             """for i in np.arange(0.2, 0.8, 0.1):
@@ -770,7 +785,7 @@ class View3D(gl.GLViewWidget):
                     for k in np.arange(-1.0, 0.7, 0.1):
                         p = np.array([i +0.01*np.random.randn(),j+0.01*np.random.randn(),k+0.01*np.random.randn()])
                         vec = p/ np.linalg.norm(p)
-                        att_vec = np.array([p0, p0 + 5.0*vec]) 
+                        att_vec = np.array([p0, p0 + self.default_length*vec]) 
                         new_lines.append(att_vec)"""
 
 
@@ -799,7 +814,7 @@ class View3D(gl.GLViewWidget):
         u = u / size
         data["size"] = np.clip(size*4.0, 10.0, 80.0)
         data["u"][0] = np.copy(data["head"])
-        data["u"][1] = np.copy(data["head"] + 5.0*u)
+        data["u"][1] = np.copy(data["head"] + self.default_length*u)
 
         return att
 
@@ -813,7 +828,7 @@ class View3D(gl.GLViewWidget):
         u = u / np.linalg.norm(u)
     
         if self.line_type == 0:
-            self.current_item["vec"].setData(pos=[new_pos, new_pos + 5.0*u])
+            self.current_item["vec"].setData(pos=[new_pos, new_pos + self.default_length*u])
         else:
             self.current_item["vec"].setData(pos=[new_pos, self.current_item["att"].pos[0]])
 
@@ -846,7 +861,7 @@ class View3D(gl.GLViewWidget):
 
         
         if self.line_type == 0:
-            self.current_item["vec"].setData(pos=[head, head + 5.0*u])
+            self.current_item["vec"].setData(pos=[head, head + self.default_length*u])
         else:
             self.current_item["vec"].setData(pos=[head, self.current_item["att"].pos[0]])
 
@@ -873,7 +888,7 @@ class View3D(gl.GLViewWidget):
             self.current_item["att"].setData(pos= np.copy(head + u).reshape(1,3))
 
         if self.line_type in [0,3]:
-            u = 5.0 * u / np.linalg.norm(u)
+            u = self.default_length * u / np.linalg.norm(u)
             self.current_item["vec"].setData(pos= [head, head + u])
         elif self.line_type == 1:
             self.current_item["vec"].setData(pos= [head, head + self.current_item["att"].pos[0]])
@@ -903,7 +918,7 @@ class View3D(gl.GLViewWidget):
             self.current_item["att"].setData(pos= (head + u).reshape(1,3))
 
         if self.line_type in [0,3]:
-            u = 5.0 * u / np.linalg.norm(u)
+            u = self.default_length * u / np.linalg.norm(u)
             self.current_item["vec"].setData(pos= [head, head + u])
         elif self.line_type == 1:
             self.current_item["vec"].setData(pos=[head, self.current_item["att"].pos[0]])
