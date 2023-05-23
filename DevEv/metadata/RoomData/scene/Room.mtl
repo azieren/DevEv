@@ -113,8 +113,8 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd  -o 0.0526316 0.0526316 1 Textures\SquareMat.png
-map_d  -o 0.0526316 0.0526316 1 Textures\SquareMat.png
+map_Kd  -s 0.024 0.024 0 -o 0.216 0.216 1 Textures\SquareMat.png
+map_d  -s 0.024 0.024 0 -o 0.216 0.216 1 Textures\SquareMat.png
 
 newmtl Coach
 Ns 200.000000
@@ -688,7 +688,7 @@ illum 3
 newmtl lambert1
 Ns 200.000000
 Ka 1.000000 1.000000 1.000000
-Kd 1.000000 1.000000 1.000000
+Kd 1.000000 0.881583 0.970408
 Ks 0.500000 0.500000 0.500000
 Ke 0.000000 0.000000 0.000000
 Ni 1.450000

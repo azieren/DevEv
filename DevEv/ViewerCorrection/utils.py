@@ -54,7 +54,7 @@ def rotation_matrix_from_vectors(a, b):
     return rotation_matrix
 
 def project_2d(poses, cams, h, w):
-    hh, ww = h//2, w//2
+    hh, ww = h//4, w//2
 
     if "att" in poses: p3d = [poses["pos"], poses["att"]]
     else: p3d = [poses["pos"]]
@@ -75,7 +75,7 @@ def project_2d(poses, cams, h, w):
         elif c == 4:  p2d[:,1] += 2*hh
         elif c == 5:  p2d += np.array([ww, 2*hh])
         elif c == 6:  p2d[:,1] += 3*hh
-        elif c == 5:  p2d += np.array([ww, 3*hh])
+        elif c == 7:  p2d += np.array([ww, 3*hh])
         p2d_list[c] = {}
         #if 0 < p2d[0,0] < w and 0 < p2d[0,1] < h:
         if has_head: p2d_list[c]["head"] = p2d[0].astype("int")

@@ -121,13 +121,13 @@ class CorrectionWindow(QWidget):
         self.project3dButton.setEnabled(True)
         self.project3dButton.setIcon(self.style().standardIcon(QStyle.SP_MessageBoxQuestion))
 
-        ## Project 3d button
+        ## Correction print
         self.showCorrectButton = QPushButton("&Show Corrected")
         self.showCorrectButton.setEnabled(True)
         self.showCorrectButton.setIcon(self.style().standardIcon(QStyle.SP_MessageBoxQuestion))
         self.showCorrectButton.clicked.connect(self.showCorrected)
 
-        ## RFinish button 
+        ## Finish button 
         self.finishButton = QPushButton("&Save and Finish")
         self.finishButton.setEnabled(True)
         self.finishButton.setIcon(self.style().standardIcon(QStyle.SP_ArrowDown))
@@ -308,9 +308,16 @@ class CorrectionWindow(QWidget):
         self.update_frame()
 
     def setHW(self, h, w):
-        cam_file = pkg_resources.resource_filename('DevEv', 'metadata/CameraParameters/cameras.npy')
+        cam_file = pkg_resources.resource_filename('DevEv', 'metadata/CameraParameters/camera_zoom_out.npy')
         self.cams = read_cameras(cam_file)
-        self.h, self.w = 1080, 1920
+        self.h, self.w = 2160, 1920
+        return
+
+    def setCams(self, cam_id):
+        cam_file = pkg_resources.resource_filename('DevEv', 'metadata/CameraParameters/camera_zoom_out.npy')
+        if cam_id == 1:
+            cam_file = pkg_resources.resource_filename('DevEv', 'metadata/CameraParameters/camera_zoom_in.npy')
+        self.cams = read_cameras(cam_file)
         return
 
     def select_frame(self, item):
@@ -323,9 +330,9 @@ class CorrectionWindow(QWidget):
         if value in self.frame_list:
             print("Frame already selected")
             return
-        if value not in self.viewer3D.attention:
+        """if value not in self.viewer3D.attention:
             print("Frame does not have attention")
-            return            
+            return  """          
         if ok:
             self.frame_list.append(value)
             self.frame_list = sorted(self.frame_list)
@@ -515,8 +522,10 @@ class CorrectionWindow(QWidget):
     def project3D(self, data):
         if len(data) < 2: return
         if self.curr_indice == -1: return
-        curr_frame = self.frame_list[self.curr_indice]
         item = self.viewer3D.current_item
+        
+        print(data)
+        
 
         att = to_3D(data, self.cams, self.h, self.w)
         u = att - item["head"].pos[0]
@@ -526,8 +535,7 @@ class CorrectionWindow(QWidget):
         p = {"pos":item["head"].pos[0], "att":att}
         poses = project_2d(p, self.cams, self.h, self.w)
 
-        new_vec = self.viewer3D.translate_attention_p(curr_frame, 
-                        att[0] - self.old_x_att, att[1] - self.old_y_att, att[2] - self.old_z_att)
+        new_vec = self.viewer3D.translate_attention_p(att[0] - self.old_x_att, att[1] - self.old_y_att, att[2] - self.old_z_att)
         self.old_x_att,  self.old_y_att,  self.old_z_att = att[0], att[1], att[2]
         self.change_att_direction(new_vec)
 
@@ -626,13 +634,13 @@ class CorrectionWindow(QWidget):
 
         self.write_attention("temp.txt")
         N = len(self.viewer3D.attention) // 1800
-        uncertain_frames, uncertain_scores = get_uncertainty(x_tr, max_n= N * 10)
+        uncertain_frames, uncertain_scores = get_uncertainty(x_tr, max_n= N * 15)
         uncertain_frames = np.array([frame_list[f] for f in uncertain_frames])
         ind = uncertain_frames.argsort()
         uncertain_scores = uncertain_scores[ind]
         self.frame_list = uncertain_frames[ind]
         print(self.frame_list)
-        print("{} Frames proposed to correct, 10 frames/min".format(len(self.frame_list)))
+        print("{} Frames proposed to correct, around 15 frames/min to correct".format(len(self.frame_list)))
         if len(self.frame_list) == 0:
             self.curr_indice = -1
             self.frame_listW.clear()

@@ -45,17 +45,22 @@ class VideoApp(QWidget):
         self.setLayout(vbox)
         
         # create the video capture thread
-        self.thread = VideoThread()
         self.duration = 0
         self.width_video, self.height_video = 0, 0
         self.last_position = 0
         self.p2d = {}
         self.clicked_att = {}
         # connect its signal to the update_image slot
-        self.thread.change_pixmap_signal.connect(self.update_image)
-        self.thread.frame_id.connect(self.update_text)
+
         # start the thread     
         self.view = [0]
+        self.setThread()
+        
+    def setThread(self):
+        self.thread = VideoThread()
+        self.thread.change_pixmap_signal.connect(self.update_image)
+        self.thread.frame_id.connect(self.update_text)
+        return
 
     def select_view(self, img):
         h, w, _ = img.shape
@@ -84,10 +89,8 @@ class VideoApp(QWidget):
         return im
 
     def set_file(self, filename):
-        self.thread.terminate()
-        self.thread.wait()
-        self.duration, self.height_video, self.width_video = self.thread.set_file(filename)
-        self.thread.start()       
+        self.thread._run_flag = False
+        self.duration, self.height_video, self.width_video = self.thread.set_file(filename)     
 
     def setPosition(self, position):
         self.thread.position_flag = position
@@ -97,29 +100,28 @@ class VideoApp(QWidget):
         return
 
     def update_last_image(self):
-        self.thread.wait()
         self.thread.get_last_image()
 
     def showImage(self):
-        self.thread.wait()
         self.thread.get_image(self.last_position)
 
     def stop_video(self):
-        if self.thread.isRunning():
-            self.thread.terminate()
-            self.thread.wait()
         self.thread._run_flag = False
 
     def start_video(self):
-        self.thread.wait()
         self.thread._run_flag = True
         self.thread.start()
 
     def closeEvent(self, event):
         self.stop_video()
-        self.thread.close()
         event.accept()
 
+    def close_thread(self):
+        self.thread._run_flag = False
+        self.thread.exit()
+        self.thread.wait()
+        return
+        
     def video_clicked(self, event):
         if not self.annotation_on: return
         self.stop_video()
@@ -130,9 +132,10 @@ class VideoApp(QWidget):
         # depending on what kind of value you like (arbitary examples)
 
         if x < w and y < h:
-            c, data = get_cam(x/w, y/h, self.width_video, self.height_video, self.view)
-            if c in self.clicked_att: del self.clicked_att[c]
-            else: self.clicked_att[c] = data
+            data = get_cam(x/w, y/h, self.width_video, self.height_video, self.view)
+            for c, info in data.items():
+                if c in self.clicked_att: del self.clicked_att[c]
+                else: self.clicked_att[c] = info
         self.update_image_proj(self.clicked_att)
         return
 
@@ -177,7 +180,7 @@ class VideoApp(QWidget):
         return QPixmap.fromImage(p)
         
 def get_cam(x, y, width_video, height_video, view):
-    if view == 0:
+    if view[0] == 0:
         x_v, y_v = int(x*width_video), int(y*height_video)
         x_m, y_m = int(x*width_video), int(y*height_video)
         if x < 0.5 and y < 0.25: 
@@ -207,17 +210,20 @@ def get_cam(x, y, width_video, height_video, view):
             y_m = y_v - int(3*height_video//4)
             x_m = x_v - int(width_video//2)
 
-        return c, {"att_v": [x_v, y_v], "att_p": [x_m, y_m] }
+        return {c:{"att_v": [x_v, y_v], "att_p": [x_m, y_m]}}
 
-    c = view - 1
-    x_v, y_v = int(x*width_video//2), int(y*height_video//4)
-    if c in [1,3,5,7]: x_v += int(width_video//2)
-    if c in [2,3]: y_v += int(height_video//4)
-    elif c in [4,5]: y_v += int(height_video//2)
-    elif c in [6,7]: y_v += int(3*height_video//4)
-    x_m, y_m = int(x*width_video//2), int(y*height_video//4)
-
-    return c, {"att_v": [x_v, y_v], "att_p": [x_m, y_m] }
+    data = {}
+    for v in view:
+        c = v - 1
+        x_v, y_v = int(x*width_video//2), int(y*height_video//4)
+        if c in [1,3,5,7]: x_v += int(width_video//2)
+        if c in [2,3]: y_v += int(height_video//4)
+        elif c in [4,5]: y_v += int(height_video//2)
+        elif c in [6,7]: y_v += int(3*height_video//4)
+        x_m, y_m = int(x*width_video//2), int(y*height_video//4)
+        data[c] = {"att_v": [x_v, y_v], "att_p": [x_m, y_m]}
+        
+    return data
 
 def main_video():
     app = QApplication(sys.argv)

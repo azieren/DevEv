@@ -368,7 +368,7 @@ class View3D(gl.GLViewWidget):
             obj.setVisible(not state)
         return
 
-    def draw_cone(self, p0, p1, L = 3.0, n=8, R= 1.5):
+    def draw_cone(self, p0, p1, L = 2.5, n=8, R= 0.7):
         # vector in direction of axis
         R0, R1 = 0, R
         v = p1 - p0
@@ -404,7 +404,7 @@ class View3D(gl.GLViewWidget):
         cone = gl.GLMeshItem(meshdata=d, glOptions = 'additive', drawEdges=True, computeNormals=False, color=self.base_color)   
         return cone
 
-    def draw_Ncone(self, p0_list, p1_list, L = 3.0, n=8, R= 1.5):
+    def draw_Ncone(self, p0_list, p1_list, L = 2.5, n=8, R= 0.7):
         # vector in direction of axis
         R0, R1 = 0, R
         
