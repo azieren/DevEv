@@ -140,15 +140,20 @@ class VideoWindow(QMainWindow):
         # Create new action
         openAction = QAction(QIcon('open.png'), '&Open Video', self)        
         openAction.setShortcut('Ctrl+O')
-        openAction.setStatusTip('Open video')
+        openAction.setStatusTip('Open video file')
         openAction.triggered.connect(self.openFile)
 
         #
         openAtt = QAction(QIcon('open.png'), '&Open Attention', self)        
         openAtt.setShortcut('Ctrl+A')
-        openAtt.setStatusTip('Open attention')
+        openAtt.setStatusTip('Open attention file')
         openAtt.triggered.connect(self.openFileAtt)
 
+        openKpt = QAction(QIcon('open.png'), '&Open Keypoint', self)        
+        openKpt.setShortcut('Ctrl+K')
+        openKpt.setStatusTip('Open Keypoint file')
+        openKpt.triggered.connect(self.openKptAtt)
+        
         # Create exit action
         exitAction = QAction(QIcon('exit.png'), '&Exit', self)        
         exitAction.setShortcut('Ctrl+Q')
@@ -197,6 +202,7 @@ class VideoWindow(QMainWindow):
         #fileMenu.addAction(newAction)
         fileMenu.addAction(openAction)
         fileMenu.addAction(openAtt)
+        fileMenu.addAction(openKpt)
         fileMenu.addAction(resetAction)
         fileMenu.addSeparator()
         fileMenu.addAction(exitAction)
@@ -331,6 +337,13 @@ class VideoWindow(QMainWindow):
 
         if fileName != '':
             self.main3Dviewer.attention = self.main3Dviewer.read_attention(fileName)
+
+    def openKptAtt(self):
+        fileName, _ = QFileDialog.getOpenFileName(self, "Open Keypoint file",
+                QDir.currentPath(), "NPY files (*.npy)")#, options=QFileDialog.DontUseNativeDialog)
+
+        if fileName != '':
+            self.main3Dviewer.attention = self.main3Dviewer.read_keypoints(fileName)
 
 
     def viewSelect(self):
