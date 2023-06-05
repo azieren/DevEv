@@ -634,13 +634,13 @@ class CorrectionWindow(QWidget):
 
         self.write_attention("temp.txt")
         N = len(self.viewer3D.attention) // 1800
-        uncertain_frames, uncertain_scores = get_uncertainty(x_tr, max_n= N * 15)
+        uncertain_frames, uncertain_scores = get_uncertainty(x_tr, max_n= N * 2)
         uncertain_frames = np.array([frame_list[f] for f in uncertain_frames])
         ind = uncertain_frames.argsort()
         uncertain_scores = uncertain_scores[ind]
         self.frame_list = uncertain_frames[ind]
         print(self.frame_list)
-        print("{} Frames proposed to correct, around 15 frames/min to correct".format(len(self.frame_list)))
+        print("{} Frames proposed to correct, around 2 frames/min to correct".format(len(self.frame_list)))
         if len(self.frame_list) == 0:
             self.curr_indice = -1
             self.frame_listW.clear()

@@ -72,13 +72,11 @@ class View3D(gl.GLViewWidget):
         self.corrected_frames = set()
         self.default_length = 0.5
 
-        #plane_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/room_setup2.json')
-        #self.plane_dict = self.read_planes(plane_file)
         room_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/Room.ply')
         self.mesh = self.read_room(room_file)
         att_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/attention.txt')
         self.attention = self.read_attention(att_file)
-        self.keypoints = self.read_keypoints("DevEv/data_2.7d_DevEv_S07_04.npy")
+        self.keypoints = self.read_keypoints("DevEv/data_3d_DevEv_S07_04_Sync.npy")
         self.draw_skeleton()
         self.init()
         return
@@ -273,7 +271,6 @@ class View3D(gl.GLViewWidget):
         vertices = np.concatenate(vertices, axis = 0)
         faces = np.concatenate(faces, axis = 0)
         colors = np.concatenate(colors, axis = 0)     
-        print(vertices.shape, colors.shape)  
         mesh_data = gl.MeshData(vertexes=vertices, faces=faces, vertexColors=colors)
 
         self.room = gl.GLMeshItem(meshdata=mesh_data, smooth=True, drawEdges=True, glOptions=option_gl)
@@ -463,20 +460,25 @@ class View3D(gl.GLViewWidget):
         c[:,2] = b
 
         self.sk_point.setData(pos = self.keypoints[f]["p"], color=c, size = np.array([10.0]))
-        self.sk_point.setVisible(False)
+        self.sk_point.setVisible(True)
         self.addItem(self.sk_point)
 
-        print(self.keypoints[f]["l"].shape)
         self.sk_lines = gl.GLLinePlotItem(pos = self.keypoints[f]["l"], color = (1.0,0.0,0.0,1.0), width= 3.0, glOptions = 'additive', mode = 'lines')
-        self.sk_lines.setVisible(False)
+        self.sk_lines.setVisible(True)
         self.addItem(self.sk_lines)
+
+        self.sk_point.hide()
+        
+        self.sk_lines.hide()
         return
 
     def read_attention(self, filename= "DevEv/metadata/RoomData/attention.txt"):
         if not os.path.exists(filename): return
         attention = {}
+        xyz = []
         with open(filename, "r") as f:
             data = f.readlines()
+
 
         for i, d in enumerate(data):
             d_split = d.replace("\n", "").split(",")
@@ -485,6 +487,7 @@ class View3D(gl.GLViewWidget):
                 flag = 0
             elif len(d_split)== 11:
                 frame, b0, b1, b2, A0, A1, A2, att0, att1, att2, flag = d_split
+            elif len(d_split) < 10: continue
             else:
                 print("Error in attention file")
                 exit()
@@ -497,40 +500,48 @@ class View3D(gl.GLViewWidget):
             att_line = np.array([b, pos])
             size = np.linalg.norm(pos - b)
             if size < 1e-6: 
-                attention[int(frame)] = np.copy(attention[int(frame) - 1])
+                attention[int(frame)] = np.copy(attention[int(frame) - 1]).item()
+                xyz.append(xyz[-1])
                 continue
             vec = (pos - b)/ ( size + 1e-6)
             att_vec = np.array([b, b + self.default_length*vec]) 
             size = np.clip(size*2.0, 5.0, 60.0)
             attention[int(frame)] = {"u":att_vec, "line":att_line, "head":b, "att":pos,
                                     "c_time":color_time, "size":size, "corrected_flag":flag}
+            xyz.append(pos)
+            
             if flag: self.corrected_frames.add(int(frame))
         print("Attention Loaded with", len(self.corrected_frames), "already corrected frames")
-        xyz = np.array([p["att"] for _, p in attention.items()])
+        print(len(attention), "frames in file")
+        xyz = np.array(xyz, dtype = float)
         kde = stats.gaussian_kde(xyz.T)
         density = kde(xyz.T)   
         a, b = min(density), max(density)
         density = (density - a) / (b-a + 1e-6)
         density = cm.jet(density)
-        for i, (_, p) in enumerate(attention.items()):
-            p["c_density"] = density[i]             
+        print(density.shape)
+        for i, (f, info) in enumerate(attention.items()):
+            print(f, type(info))
+            info["c_density"] = density[int(i)]             
         return attention
 
     def read_keypoints(self, filename):
-        if not os.path.exists(filename): return {}
-        output = {}
-        data = np.load(filename, allow_pickle=True).item()
-        for f, p in data.items():
-            if len(p) == 0: continue
-            bones = []
-            for p1, p2 in SKELETON:
-                #bones.append([p[p1], p[p2]])
-                bones.append(p[p1])
-                bones.append(p[p2])
-            bones = np.array(bones)
-            output[f] = {"p":np.array(p), "l":bones}
-        return output
-
+            if not os.path.exists(filename): return {}
+            output = {}
+            data = np.load(filename, allow_pickle=True).item()
+            # print(data.keys()[0])
+            for f, data1 in data.items():
+                p=data1['3d']
+                if len(p) == 0: continue
+                bones = []
+                for p1, p2 in SKELETON:
+                    #bones.append([p[p1], p[p2]])
+                    bones.append(p[p1])
+                    bones.append(p[p2])
+                bones = np.array(bones)
+                output[f] = {"p":np.array(p), "l":bones}
+            return output
+    
     def draw_frame(self, f, plot_vec = False):
         if f is None:
             f = self.current_item["frame"]                              
