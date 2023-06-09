@@ -663,13 +663,13 @@ class View3D(gl.GLViewWidget):
                 acc_vecs = np.concatenate([np.copy(self.acc_item["vec"].pos), np.copy(self.current_item["vec"].pos).reshape(2,3)])
                 acc_att = np.concatenate([np.copy(self.acc_item["att"].pos), np.copy(att).reshape(1,3)])
                 acc_size = np.concatenate([np.copy(self.acc_item["att"].size) , np.copy(size_p).reshape(1)])
-                if f in self.keypoints and self.keypoints[f]["hand"] is not None:: acc_hand = np.concatenate([np.copy(self.acc_item["hand"].pos) , np.copy(self.keypoints[f]["hand"]).reshape(2,3)])
+                if f in self.keypoints and self.keypoints[f]["hand"] is not None: acc_hand = np.concatenate([np.copy(self.acc_item["hand"].pos) , np.copy(self.keypoints[f]["hand"]).reshape(2,3)])
 
             
             self.acc_item["head"].setData(pos = acc_heads)
             self.acc_item["vec"].setData(pos = acc_vecs)
             self.acc_item["att"].setData(pos = acc_att, size = acc_size)
-            if f in self.keypoints and self.keypoints[f]["hand"] is not None:: self.acc_item["hand"].setData(pos = acc_hand)
+            if f in self.keypoints and self.keypoints[f]["hand"] is not None: self.acc_item["hand"].setData(pos = acc_hand)
             self.acc_item["frame"].append(f)
             #print(len(self.acc_item["frame"]), acc_heads.shape, acc_vecs.shape)
         return
