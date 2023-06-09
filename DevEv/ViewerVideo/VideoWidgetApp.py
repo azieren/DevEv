@@ -6,6 +6,7 @@ from PyQt5.QtGui import QImage, QPixmap
 import numpy as np
 import cv2
 import sys
+import os
 
 from .VideoThreadApp import VideoThread
 
@@ -90,7 +91,8 @@ class VideoApp(QWidget):
 
     def set_file(self, filename):
         self.thread._run_flag = False
-        self.duration, self.height_video, self.width_video = self.thread.set_file(filename)     
+        self.duration, self.height_video, self.width_video = self.thread.set_file(filename)   
+        self.setWindowTitle(os.path.basename(filename))  
 
     def setPosition(self, position):
         self.thread.position_flag = position

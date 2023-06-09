@@ -56,8 +56,8 @@ class View3D(gl.GLViewWidget):
         xgrid = gl.GLGridItem()
         xgrid.setSize(x=50, y=40)
         self.addItem(xgrid)
-        self.current_item = {"head":None , "att":None, "vec":None, "cone":None , "frame":0}
-        self.acc_item = {"head":None , "att":None, "vec":None, "cone":None , "frame":[]}
+        self.current_item = {"head":None , "att":None, "vec":None, "cone":None, "hand":None, "skpoint":None ,"skline":None , "frame":0}
+        self.acc_item = {"head":None , "att":None, "vec":None, "cone":None, "hand":None , "frame":[]}
         self.drawn_t_item = None
         self.drawn_t_point = None
         self.drawn_h_point = None
@@ -74,7 +74,8 @@ class View3D(gl.GLViewWidget):
         self.default_length = 0.5
 
         room_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/Room.ply')
-        self.mesh = self.read_room(room_file)
+        self.mesh = trimesh.load_mesh(room_file)
+        self.read_room()
         att_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/attention.txt')
         self.attention = self.read_attention(att_file)
         self.keypoints = self.read_keypoints("DevEv/data_3d_DevEv_S07_04_Sync.npy")
@@ -112,7 +113,6 @@ class View3D(gl.GLViewWidget):
         self.acc_item["att"] = gl.GLScatterPlotItem(pos = u[1], color=c, size = np.array([1.0]), glOptions = 'additive')
         self.acc_item["vec"] = gl.GLLinePlotItem(pos = u, color =c, width= 3.0, antialias = True, glOptions = 'additive', mode = 'lines')
         self.acc_item["cone"] = [] #self.draw_cone(u[0], u[1])
-        #self.acc_item["cone"].setColor(c)
 
         for _, obj in self.acc_item.items():
             if type(obj) == list: continue
@@ -189,7 +189,6 @@ class View3D(gl.GLViewWidget):
         else: ev.ignore()
         return 
 
-
     def mouseMoveEvent(self, ev):
         lpos = ev.position() if hasattr(ev, 'position') else ev.localPos()
         diff = lpos - self.mousePos
@@ -227,8 +226,7 @@ class View3D(gl.GLViewWidget):
         self.click_enable = state
         return
 
-
-    def read_room(self, file):
+    def read_room(self):
         option_gl = {
         GL_LIGHTING:True,
         GL_LIGHT0:True,
@@ -261,7 +259,6 @@ class View3D(gl.GLViewWidget):
             }  
 
         
-        mesh = trimesh.load_mesh(file)
         mat_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/scene/Room.obj')
         mtl_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/scene/Room.mtl')
         obj = OBJ(mat_file, swapyz=True)
@@ -342,7 +339,7 @@ class View3D(gl.GLViewWidget):
         #self.room = gl.GLMeshItem(meshdata=mesh_data, smooth=True, drawEdges=False, glOptions='translucent')
         self.room = GLMeshTexturedItem(meshdata=mesh_data, textures = textures, smooth=True, drawEdges=False, glOptions='translucent')
         self.addItem(self.room)"""
-        return mesh
+        return 
 
     def accumulate3D(self, state):
         self.accumulate = state
@@ -353,6 +350,8 @@ class View3D(gl.GLViewWidget):
         self.acc_item["vec"].hide()
         self.acc_item["att"].setData(pos = u[1], size = np.array([1.0]))
         self.acc_item["att"].hide()
+        self.acc_item["hand"].setData(pos = np.zeros((2,3)))
+        self.acc_item["hand"].hide()
         self.acc_item["frame"] = []
         return
 
@@ -497,28 +496,33 @@ class View3D(gl.GLViewWidget):
         return d, offset
 
     def draw_skeleton(self):
-        f = list(self.keypoints.keys())
-        if len(f) == 0: return
-        f = f[0]
- 
-        self.sk_point = gl.GLScatterPlotItem(glOptions = 'additive')
+        self.current_item["skpoint"] = gl.GLScatterPlotItem(glOptions = 'additive')
         c = np.array(CocoColors)/255.0
         r = np.copy(c[:,2])
         b = np.copy(c[:,0])
         c[:,0] = r
         c[:,2] = b
 
-        self.sk_point.setData(pos = self.keypoints[f]["p"], color=c, size = np.array([10.0]))
-        self.sk_point.setVisible(True)
-        self.addItem(self.sk_point)
+        self.current_item["skpoint"].setData(pos = np.zeros((17,3)), color=c, size = np.array([15.0]))
+        self.current_item["skpoint"].setVisible(True)
+        self.addItem(self.current_item["skpoint"])
 
-        self.sk_lines = gl.GLLinePlotItem(pos = self.keypoints[f]["l"], color = (1.0,0.0,0.0,1.0), width= 3.0, glOptions = 'additive', mode = 'lines')
-        self.sk_lines.setVisible(True)
-        self.addItem(self.sk_lines)
+        self.current_item["skline"] = gl.GLLinePlotItem(pos =  np.zeros((34,3)), color = (1.0,0.0,0.0,1.0), width= 3.0, glOptions = 'additive', mode = 'lines')
+        self.current_item["skline"].setVisible(True)
+        self.addItem(self.current_item["skline"])
 
-        self.sk_point.hide()
-        
-        self.sk_lines.hide()
+        self.current_item["hand"] = gl.GLScatterPlotItem(glOptions = 'additive')
+        self.current_item["hand"].setData(pos = np.zeros((2,3)), color=(1.0,1.0,0.0,1.0), size = np.array([15.0]))
+        self.current_item["hand"].setVisible(True)
+        self.addItem(self.current_item["hand"])
+  
+        self.acc_item["hand"] = gl.GLScatterPlotItem(glOptions = 'additive')
+        self.acc_item["hand"].setData(pos = np.zeros((2,3)), color=(0.5, 0.5, 0.0, 0.35), size = np.array([15.0]))
+        self.addItem(self.acc_item["hand"])  
+                      
+        #self.current_item["skpoint"].hide()
+        #self.current_item["skline"].hide()
+        self.acc_item["hand"].hide()
         return
 
     def read_attention(self, filename= "DevEv/metadata/RoomData/attention.txt"):
@@ -573,29 +577,36 @@ class View3D(gl.GLViewWidget):
         return attention
 
     def read_keypoints(self, filename):
-            if not os.path.exists(filename): return {}
-            output = {}
-            data = np.load(filename, allow_pickle=True).item()
-            # print(data.keys()[0])
-            for f, data1 in data.items():
-                p=data1['3d']
-                if len(p) == 0: continue
-                bones = []
-                for p1, p2 in SKELETON:
-                    #bones.append([p[p1], p[p2]])
-                    bones.append(p[p1])
-                    bones.append(p[p2])
-                bones = np.array(bones)
-                output[f] = {"p":np.array(p), "l":bones}
-            return output
+        if not os.path.exists(filename): return {}
+        output = {}
+        data = np.load(filename, allow_pickle=True).item()
+        # print(data.keys()[0])
+        for f, data1 in data.items():
+            p = data1['3d']
+            if len(p) == 0: continue
+            bones = []
+            for p1, p2 in SKELETON:
+                #bones.append([p[p1], p[p2]])
+                bones.append(p[p1])
+                bones.append(p[p2])
+            bones = np.array(bones)
+            hand = data1['3d_closest_points'][9:11]
+            print(hand.shape, bones.shape, np.array(p).shape)
+            output[f] = {"p":np.array(p), "l":bones, "hand":hand}
+        return output
     
     def draw_frame(self, f, plot_vec = False):
         if f is None:
             f = self.current_item["frame"]                              
 
         if f in self.keypoints:
-            self.sk_point.setData(pos = self.keypoints[f]["p"])
-            self.sk_lines.setData(pos = self.keypoints[f]["l"])
+            self.current_item["skpoint"].setData(pos = self.keypoints[f]["p"])
+            self.current_item["skline"].setData(pos = self.keypoints[f]["l"])
+            if  self.current_item["hand"] is not None:
+                self.current_item["hand"].setData(pos = self.keypoints[f]["hand"])
+                self.current_item["hand"].setVisible(True)
+            self.current_item["skline"].setVisible(True)
+            #self.current_item["skpoint"].setVisible(True)
 
         if f not in self.attention: 
             return
@@ -641,19 +652,24 @@ class View3D(gl.GLViewWidget):
                 acc_vecs = np.copy(self.current_item["vec"].pos).reshape(2,3)
                 acc_att = np.copy(att).reshape(1,3)
                 acc_size = np.copy(size_p).reshape(1)
+                if f in self.keypoints and self.keypoints[f]["hand"] is not None: 
+                    acc_hand = np.copy(self.keypoints[f]["hand"]).reshape(2,3)
                 self.acc_item["head"].setVisible(True)
                 self.acc_item["vec"].setVisible(True)
                 self.acc_item["att"].setVisible(True)
+                self.acc_item["hand"].setVisible(True)
             else:
                 acc_heads = np.concatenate([np.copy(self.acc_item["head"].pos), np.copy(head).reshape(1,3)])
                 acc_vecs = np.concatenate([np.copy(self.acc_item["vec"].pos), np.copy(self.current_item["vec"].pos).reshape(2,3)])
                 acc_att = np.concatenate([np.copy(self.acc_item["att"].pos), np.copy(att).reshape(1,3)])
                 acc_size = np.concatenate([np.copy(self.acc_item["att"].size) , np.copy(size_p).reshape(1)])
+                if f in self.keypoints and self.keypoints[f]["hand"] is not None:: acc_hand = np.concatenate([np.copy(self.acc_item["hand"].pos) , np.copy(self.keypoints[f]["hand"]).reshape(2,3)])
 
             
             self.acc_item["head"].setData(pos = acc_heads)
             self.acc_item["vec"].setData(pos = acc_vecs)
             self.acc_item["att"].setData(pos = acc_att, size = acc_size)
+            if f in self.keypoints and self.keypoints[f]["hand"] is not None:: self.acc_item["hand"].setData(pos = acc_hand)
             self.acc_item["frame"].append(f)
             #print(len(self.acc_item["frame"]), acc_heads.shape, acc_vecs.shape)
         return
@@ -702,7 +718,7 @@ class View3D(gl.GLViewWidget):
             density = (density - a) / (b-a + 1e-6)
             color = cm.jet(density)
 
-        itemh = gl.GLScatterPlotItem(pos = heads, color=color, size = 10.0)
+        itemh = gl.GLScatterPlotItem(pos = heads, color=color, size = 15.0)
         item = gl.GLScatterPlotItem(pos = points, color=color, size = size_list)
 
         self.drawn_t_point = item 
@@ -744,7 +760,7 @@ class View3D(gl.GLViewWidget):
                 self.addItem(mesh) 
 
 
-            np.save("mesh.npy", {"vertexes":vecs, "faces":hull.simplices})
+            np.save("mesh_hull.npy", {"vertexes":vecs, "faces":hull.simplices})
             print("Hull Surface Area: ", hull.area)
             print("Hull Volume: ", hull.volume)
 

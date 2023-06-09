@@ -136,8 +136,8 @@ def to_3D(points, cameras, h, w):
         xvec[0] = cam_pos[0]-xvec[0]
         xvec[1] = cam_pos[1]-xvec[1]
         xvec[2] = cam_pos[2]-xvec[2]
-        xvec = - xvec
-        P.append(xvec[:3])
+        xvec = - xvec[:3]
+        P.append(xvec/np.linalg.norm(xvec))
         C.append(cam_pos)
 
     #att = line_intersect(C[0], P[0], C[1], P[1])

@@ -373,7 +373,7 @@ class CorrectionWindow(QWidget):
         self.update_frame()
 
     def copy_frame(self):
-        if len(self.frame_list) == 0: return
+        if len(self.frame_list) == 0 or self.curr_indice == -1: return
         curr_frame = self.frame_list[self.curr_indice]
         if not curr_frame in self.viewer3D.attention:
             return
@@ -385,19 +385,20 @@ class CorrectionWindow(QWidget):
         if self.memory_buffer is None: return
 
         pos = self.memory_buffer["head"]
-        self.old_x, self.old_y, self.old_z = pos[0], pos[1], pos[2]
         self.max_XEdit.setValue(pos[0])
         self.max_YEdit.setValue(pos[1])
         self.max_ZEdit.setValue(pos[2])
+        self.x_changed(None, pos[0])
+        self.y_changed(None, pos[1])
+        self.z_changed(None, pos[2])
 
         pos_A = self.memory_buffer["att"]
-        self.old_x_att, self.old_y_att, self.old_z_att = pos_A[0], pos_A[1], pos_A[2]
         self.max_XAEdit.setValue(pos_A[0])
         self.max_YAEdit.setValue(pos_A[1])
         self.max_ZAEdit.setValue(pos_A[2])
-
-        self.origin_vec = (self.memory_buffer["u"][1] - self.memory_buffer["u"][0])/np.linalg.norm(self.memory_buffer["u"][1] - self.memory_buffer["u"][0])
-        self.change_att_direction(self.origin_vec)        
+        self.x_att_changed(None, pos_A[0])
+        self.y_att_changed(None, pos_A[1])
+        self.z_att_changed(None, pos_A[2])
         return
     
     def update_info(self):
@@ -568,8 +569,7 @@ class CorrectionWindow(QWidget):
         item = self.viewer3D.current_item
         
         print(data)
-        
-
+    
         att = to_3D(data, self.cams, self.h, self.w)
         u = att - item["head"].pos[0]
         u = u / np.linalg.norm(u)
@@ -703,7 +703,8 @@ class CorrectionWindow(QWidget):
         if len(self.history_corrected) == 0:
             message = "No frames"
         else:
-            message = "\n".join([str(x) for x in sorted(self.history_corrected)])
+            message = ", ".join([str(x) for x in sorted(self.history_corrected)])
+        print(message)
         QMessageBox.about(self, "List of corrected frames", message)
         return
 
@@ -735,13 +736,13 @@ class CorrectionWindow(QWidget):
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Information)
 
-        msg.setText("Do you want to Quit the Correction Tool?")
-        msg.setWindowTitle("Quit")
+        msg.setText("Do you want to Run the assistant?")
+        msg.setWindowTitle("Assistant")
         msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
             
         retval = msg.exec_()
         if retval == QMessageBox.Yes:
-            self.close()
+            self.runGP()      
         return
 
     def closeEvent(self, event):

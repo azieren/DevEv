@@ -14,7 +14,7 @@ class VideoWindow(QMainWindow):
 
     def __init__(self, video_file=None, att_file=None, parent=None):
         super(VideoWindow, self).__init__(parent)
-        self.setWindowTitle("DevEnv") 
+        self.setWindowTitle("DevEv") 
         self.move(200, 100)
 
         self.mediaPlayer = VideoApp()
