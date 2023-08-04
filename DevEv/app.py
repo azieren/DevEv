@@ -57,6 +57,7 @@ class VideoWindow(QMainWindow):
         self.positionSlider.sliderMoved.connect(self.setPosition)
         self.positionSlider.sliderReleased.connect(self.setImageSlider)
 
+                
         self.resetButton = QPushButton("&Reset View", self)
         self.resetButton.setEnabled(True)
         self.resetButton.clicked.connect(self.reset3D)
@@ -317,6 +318,9 @@ class VideoWindow(QMainWindow):
         self.playBackButton.setEnabled(True)
         self.playFrontButton.setEnabled(True)
         self.positionSlider.setRange(0, self.mediaPlayer.duration)
+        
+
+        
         self.minInt.setTop(self.mediaPlayer.duration - 10)
         self.maxInt.setTop(self.mediaPlayer.duration)
         self.correctionWidget.setHW(self.mediaPlayer.height_video, self.mediaPlayer.width_video)      

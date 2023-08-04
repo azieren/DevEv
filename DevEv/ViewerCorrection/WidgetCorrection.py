@@ -112,6 +112,7 @@ class CorrectionWindow(QWidget):
 
         self.saveButton = QPushButton("&Save")
         self.saveButton.setEnabled(True)
+        self.saveButton.setShortcut("Ctrl+S")
         self.saveButton.setIcon(self.style().standardIcon(QStyle.SP_ArrowUp))
         self.saveButton.clicked.connect(self.save_pos)
 
@@ -142,7 +143,6 @@ class CorrectionWindow(QWidget):
         self.finishButton = QPushButton("&Save and Finish")
         self.finishButton.setEnabled(True)
         self.finishButton.setIcon(self.style().standardIcon(QStyle.SP_ArrowDown))
-        self.finishButton.setShortcut("Ctrl+S")
         self.finishButton.setStatusTip('Save File')
         self.finishButton.clicked.connect(self.finish)
 
@@ -349,7 +349,8 @@ class CorrectionWindow(QWidget):
         if ok:
             value = int(value)
             self.frame_list = np.append(self.frame_list, value)
-            self.frame_list = sorted(self.frame_list)
+            self.frame_list = np.sort(self.frame_list)
+            print(self.frame_list)
             
             self.frame_listW.addItem(ListWidgetItem("{} - NA".format(value)))
             self.curr_indice = self.frame_listW.currentRow()
@@ -362,7 +363,7 @@ class CorrectionWindow(QWidget):
         if len(self.frame_list) == 0: 
             return
         f = self.frame_list[self.curr_indice]
-        del self.frame_list[self.curr_indice]
+        self.frame_list = np.delete(self.frame_list,self.curr_indice)
         self.frame_listW.takeItem(self.curr_indice)
         self.curr_indice = self.frame_listW.currentRow()
         if f in self.corrected_list:
@@ -383,22 +384,13 @@ class CorrectionWindow(QWidget):
 
     def paste_frame(self):
         if self.memory_buffer is None: return
+        curr_frame = self.frame_list[self.curr_indice]
+        if not curr_frame in self.viewer3D.attention:
+            return        
 
-        pos = self.memory_buffer["head"]
-        self.max_XEdit.setValue(pos[0])
-        self.max_YEdit.setValue(pos[1])
-        self.max_ZEdit.setValue(pos[2])
-        self.x_changed(None, pos[0])
-        self.y_changed(None, pos[1])
-        self.z_changed(None, pos[2])
-
-        pos_A = self.memory_buffer["att"]
-        self.max_XAEdit.setValue(pos_A[0])
-        self.max_YAEdit.setValue(pos_A[1])
-        self.max_ZAEdit.setValue(pos_A[2])
-        self.x_att_changed(None, pos_A[0])
-        self.y_att_changed(None, pos_A[1])
-        self.z_att_changed(None, pos_A[2])
+        self.viewer3D.attention[curr_frame] = copy.deepcopy(self.memory_buffer)
+        self.update_frame() 
+        self.save_pos()
         return
     
     def update_info(self):
@@ -420,8 +412,8 @@ class CorrectionWindow(QWidget):
         self.max_YAEdit.setValue(pos_A[1])
         self.max_ZAEdit.setValue(pos_A[2])
 
-        self.origin_vec = (data["u"][1] - data["u"][0])/np.linalg.norm(data["u"][1] - data["u"][0])
-        self.change_att_direction(self.origin_vec)
+        #self.origin_vec = (data["u"][1] - data["u"][0])/np.linalg.norm(data["u"][1] - data["u"][0])
+        #self.change_att_direction(self.origin_vec)
 
         return
 
@@ -556,7 +548,7 @@ class CorrectionWindow(QWidget):
         att = self.viewer3D.modify_attention(curr_frame)
         self.update_att(att)
         #self.origin_angles = np.array([x_, y_, z_])
-        curr_frame = self.frame_list[self.curr_indice]
+        #curr_frame = self.frame_list[self.curr_indice]
         self.frame_id.emit(curr_frame)
         if curr_frame not in self.corrected_list:
             self.corrected_list.add(curr_frame)
@@ -676,7 +668,7 @@ class CorrectionWindow(QWidget):
             frame_list.append(f)
 
         self.write_attention("temp.txt")
-        N = len(self.viewer3D.attention) // 1800
+        N = 60 #len(self.viewer3D.attention) // 1800
         uncertain_frames, uncertain_scores = get_uncertainty(x_tr, max_n= N * 2)
         uncertain_frames = np.array([frame_list[f] for f in uncertain_frames])
         ind = uncertain_frames.argsort()

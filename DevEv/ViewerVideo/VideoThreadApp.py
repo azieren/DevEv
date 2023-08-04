@@ -40,7 +40,7 @@ class VideoThread(QThread):
                 if ret:   
                     self.last_image = cv_img            
                     self.change_pixmap_signal.emit(cv_img)                   
-                    time.sleep(1/self.fps)
+                    time.sleep(1/(self.fps+5))
                     self.curr_frame += 1
                 else:
                     self.cap = cv2.VideoCapture(self.filename)

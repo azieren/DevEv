@@ -155,7 +155,7 @@ class VideoApp(QWidget):
     @pyqtSlot(int)
     def update_text(self, frame):
         second = frame//self.thread.fps
-        self.textLabel.setText("Frame: {} \t Time: {} mn {} s".format(frame, second//60, second % 60))
+        self.textLabel.setText("Frame: {} \t Time: {} min {} s".format(frame, second//60, second % 60))
         self.frame_id.emit(frame)
 
     @pyqtSlot(bool)
