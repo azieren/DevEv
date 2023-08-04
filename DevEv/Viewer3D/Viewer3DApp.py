@@ -95,17 +95,17 @@ class View3D(gl.GLViewWidget):
         #'azimuth': -80.0
 
  
-        self.opts['center'] = QVector3D(-0.47168588638305664, 0.7047028541564941, 0.896643340587616)  ## will always appear at the center of the widget
-        self.opts['distance'] = 2.304011082681173        ## distance of camera from center
-        self.opts['fov'] = 92.69362818343406                ## horizontal field of view in degrees
-        self.opts['elevation'] = 31.0          ## camera's angle of elevation in degrees
-        self.opts['azimuth'] = -80.0  
+        #self.opts['center'] = QVector3D(0.0,0.0,0.0)  ## will always appear at the center of the widget
+        #self.opts['distance'] = 10        ## distance of camera from center
+        #self.opts['fov'] = 90                ## horizontal field of view in degrees
+        #self.opts['elevation'] = 0.0          ## camera's angle of elevation in degrees
+        #self.opts['azimuth'] = 0.0  
         # 
-        #self.opts['center'] = QVector3D(0,0,0)  ## will always appear at the center of the widget
-        #self.opts['distance'] = 20.0         ## distance of camera from center
-        #self.opts['fov'] = 40                ## horizontal field of view in degrees
-        #self.opts['elevation'] = 90          ## camera's angle of elevation in degrees
-        #self.opts['azimuth'] = 0            ## camera's azimuthal angle in degrees 
+        self.opts['center'] = QVector3D(0,0,0)  ## will always appear at the center of the widget
+        self.opts['distance'] = 20.0         ## distance of camera from center
+        self.opts['fov'] = 40                ## horizontal field of view in degrees
+        self.opts['elevation'] = 90          ## camera's angle of elevation in degrees
+        self.opts['azimuth'] = 0            ## camera's azimuthal angle in degrees 
                                              ## (rotation around z-axis 0 points along x-axis)
         self.opts['viewport'] = None         ## glViewport params; None == whole widget
         self.setBackgroundColor(pg.getConfigOption('background'))
@@ -233,7 +233,7 @@ class View3D(gl.GLViewWidget):
             translation = scale_factor*R.transposed().mapVector(QVector3D(diff[0], -diff[1], 0.0))
             self.translate_head(translation[0], translation[1], 0, emit = True)
         else:
-            rotation_speed = 5.0
+            rotation_speed = 10.0
             sensitivity = self.pixelSize(self.opts['center'])
             right_vector = QVector3D(R[0, 0], R[0, 1], R[0, 2])
             up_vector = QVector3D(R[1, 0], R[1, 1], R[1, 2])
