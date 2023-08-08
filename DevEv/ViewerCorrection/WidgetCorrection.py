@@ -606,11 +606,18 @@ class CorrectionWindow(QWidget):
                 corrected_merged[-1].append(f)
             else:
                 corrected_merged.append([f])
-
+        print(corrected_merged)        
+        self.write_attention("temp.txt")
+        
         min_f, max_f = min(self.viewer3D.attention.keys()), max(self.viewer3D.attention.keys())
         for seg in corrected_merged: 
             seg = sorted(seg)        
             start, end = max(min_f, seg[0]-threshold), min(seg[-1] + threshold, max_f)
+            while start not in self.viewer3D.attention:
+                start += 1
+            while end not in self.viewer3D.attention:
+                end -= 1
+                                
             print(seg, start, end)
             mask = build_mask([x-start for x in seg], end-start+1, threshold = threshold)[:, np.newaxis]
             interp_list = [start] + seg + [end]
@@ -633,6 +640,7 @@ class CorrectionWindow(QWidget):
                 p = self.viewer3D.attention[f]
                 m = mask[i]
                 v_or = np.copy(p["u"][1] - p["u"][0])
+                
                 p["head"] = (1-m)*p["head"] + x_interp[i, :3]*m
                 v = (1-m)*v_or + x_interp[i, 3:]*m
                 v_n = np.linalg.norm(v)
@@ -642,6 +650,7 @@ class CorrectionWindow(QWidget):
                 else:
                     v = v/v_n          
                 att = self.viewer3D.collision(p["head"], v)
+                print(f, p["head"] , att)
                 if (att is None or v is None or p["head"] is None) and old_p is not None:
                     p = copy.deepcopy(old_p)
                     continue 
@@ -668,8 +677,8 @@ class CorrectionWindow(QWidget):
             frame_list.append(f)
 
         self.write_attention("temp.txt")
-        N = 30 #len(self.viewer3D.attention) // 1800
-        uncertain_frames, uncertain_scores = get_uncertainty(x_tr, max_n= N * 2)
+        N = 60 #len(self.viewer3D.attention) // 1800
+        uncertain_frames, uncertain_scores = get_uncertainty(x_tr, max_n= N)
         uncertain_frames = np.array([frame_list[f] for f in uncertain_frames])
         ind = uncertain_frames.argsort()
         uncertain_scores = uncertain_scores[ind]
@@ -686,6 +695,7 @@ class CorrectionWindow(QWidget):
         self.frame_listW.clear()
         for f, s in zip(self.frame_list, uncertain_scores):
             self.frame_listW.addItem(ListWidgetItem("{} - {:.2f}".format(f,s)))
+            self.viewer3D.attention[f]["corrected_flag"] = 2
         self.frame_listW.setCurrentRow(0)
         self.corrected_list = set()
         self.update_frame()
@@ -695,7 +705,7 @@ class CorrectionWindow(QWidget):
         if len(self.history_corrected) == 0:
             message = "No frames"
         else:
-            message = ", ".join([str(x) for x in sorted(self.history_corrected)])
+            message = ", ".join([ str(x) for x in self.history_corrected.keys()])
         print(message)
         QMessageBox.about(self, "List of corrected frames", message)
         return
@@ -706,6 +716,7 @@ class CorrectionWindow(QWidget):
             #options=QFileDialog.DontUseNativeDialog)
             if fileName == '':
                 return
+        print(self.history_corrected)
         with open(fileName, "w") as w:
             w.write("")
             for i, (f, p) in enumerate(self.viewer3D.attention.items()):
@@ -715,9 +726,9 @@ class CorrectionWindow(QWidget):
                 w.write("{:d},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:d}\n".format(
                     f, pos[0], pos[1], pos[2], v[0], v[1], v[2], att[0], att[1], att[2], flag
                 ))
-                if flag: self.history_corrected.add(f)
+                if flag > 0: self.history_corrected[f] = flag
         self.viewer3D.read_attention(fileName)
-        print("Corrected frames:", len(self.history_corrected))
+        print("Corrected frames:", len([x for x, y in self.history_corrected.items() if y == 1]))
         print("File saved")
         
         return
@@ -735,6 +746,25 @@ class CorrectionWindow(QWidget):
         retval = msg.exec_()
         if retval == QMessageBox.Yes:
             self.runGP()      
+        return
+
+    def update_list_frames(self):
+        self.history_corrected = self.viewer3D.corrected_frames
+        print(self.history_corrected)
+        if len(self.history_corrected) == 0: return
+        self.frame_list = np.array([], dtype=int)
+        
+        for value, flag in self.history_corrected.items():
+            value = int(value)
+            self.frame_list = np.append(self.frame_list, value)
+            self.frame_listW.addItem(ListWidgetItem("{} - NA".format(value)))
+            if flag == 1:
+                self.frame_listW.item(len(self.frame_list) - 1).setBackground(Qt.blue)
+            
+        self.frame_list = np.sort(self.frame_list)
+        self.frame_listW.setCurrentRow(0)
+        self.curr_indice = 0
+        self.update_frame()
         return
 
     def closeEvent(self, event):

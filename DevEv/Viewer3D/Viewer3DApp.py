@@ -70,7 +70,7 @@ class View3D(gl.GLViewWidget):
         self.add_Head = True
         self.click_enable = False
         self.a_pressed = False
-        self.corrected_frames = set()
+        self.corrected_frames = {}
         self.default_length = 0.5
 
         room_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/Room.ply')
@@ -82,7 +82,7 @@ class View3D(gl.GLViewWidget):
         self.draw_skeleton()
         self.init()
         return
-
+    
     def reset(self):
         """
         Initialize the widget state or reset the current state to the original state.
@@ -233,7 +233,7 @@ class View3D(gl.GLViewWidget):
             translation = scale_factor*R.transposed().mapVector(QVector3D(diff[0], -diff[1], 0.0))
             self.translate_head(translation[0], translation[1], 0, emit = True)
         else:
-            rotation_speed = 10.0
+            rotation_speed = 5.0
             sensitivity = self.pixelSize(self.opts['center'])
             right_vector = QVector3D(R[0, 0], R[0, 1], R[0, 2])
             up_vector = QVector3D(R[1, 0], R[1, 1], R[1, 2])
@@ -580,7 +580,7 @@ class View3D(gl.GLViewWidget):
         if not os.path.exists(filename): return
         attention = {}
         xyz = []
-        self.corrected_frames = set()
+        self.corrected_frames = {}
         with open(filename, "r") as f:
             data = f.readlines()
 
@@ -604,6 +604,7 @@ class View3D(gl.GLViewWidget):
 
             att_line = np.array([b, pos])
             size = np.linalg.norm(pos - b)
+            if flag > 0: self.corrected_frames[int(frame)]= flag
             if size < 1e-6: 
                 attention[int(frame)] = np.copy(attention[int(frame) - 1]).item()
                 xyz.append(xyz[-1])
@@ -615,8 +616,8 @@ class View3D(gl.GLViewWidget):
                                     "c_time":color_time, "size":size, "corrected_flag":flag}
             xyz.append(pos)
             
-            if flag: self.corrected_frames.add(int(frame))
-        print("Attention Loaded with", len(self.corrected_frames), "already corrected frames")
+        print("Attention Loaded with", len([x for x, y in self.corrected_frames.items() if y == 1]), "already corrected frames")
+        print("Attention Loaded with", len([x for x, y in self.corrected_frames.items() if y == 2]), "frames selected for correction")
         print(len(attention), "frames in file")
         xyz = np.array(xyz, dtype = float)
         kde = stats.gaussian_kde(xyz.T)

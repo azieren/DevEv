@@ -341,6 +341,7 @@ class VideoWindow(QMainWindow):
 
         if fileName != '':
             self.main3Dviewer.attention = self.main3Dviewer.read_attention(fileName)
+            self.correctionWidget.update_list_frames()
 
     def openKptAtt(self):
         fileName, _ = QFileDialog.getOpenFileName(self, "Open Keypoint file",
