@@ -14,7 +14,7 @@ class VideoWindow(QMainWindow):
 
     def __init__(self, video_file=None, att_file=None, parent=None):
         super(VideoWindow, self).__init__(parent)
-        self.setWindowTitle("DevEnv") 
+        self.setWindowTitle("DevEv") 
         self.move(200, 100)
 
         self.mediaPlayer = VideoApp()
@@ -31,7 +31,8 @@ class VideoWindow(QMainWindow):
         self.correctionWidget.pose2d.connect(self.mediaPlayer.update_image_proj)
         self.correctionWidget.open_id.connect(self.mediaPlayer.set_annotation)
         self.correctionWidget.open_id.connect(self.main3Dviewer.set_annotation)
-        self.correctionWidget.project3dButton.clicked.connect(self.mediaPlayer.send_annotation)
+        self.correctionWidget.project3dButtonAtt.clicked.connect(self.mediaPlayer.send_annotation_att)
+        self.correctionWidget.project3dButtonHead.clicked.connect(self.mediaPlayer.send_annotation_head)
         self.mediaPlayer.annotations_id.connect(self.correctionWidget.project3D)
 
         # Button
@@ -57,6 +58,7 @@ class VideoWindow(QMainWindow):
         self.positionSlider.sliderMoved.connect(self.setPosition)
         self.positionSlider.sliderReleased.connect(self.setImageSlider)
 
+                
         self.resetButton = QPushButton("&Reset View", self)
         self.resetButton.setEnabled(True)
         self.resetButton.clicked.connect(self.reset3D)
@@ -140,15 +142,20 @@ class VideoWindow(QMainWindow):
         # Create new action
         openAction = QAction(QIcon('open.png'), '&Open Video', self)        
         openAction.setShortcut('Ctrl+O')
-        openAction.setStatusTip('Open video')
+        openAction.setStatusTip('Open video file')
         openAction.triggered.connect(self.openFile)
 
         #
         openAtt = QAction(QIcon('open.png'), '&Open Attention', self)        
         openAtt.setShortcut('Ctrl+A')
-        openAtt.setStatusTip('Open attention')
+        openAtt.setStatusTip('Open attention file')
         openAtt.triggered.connect(self.openFileAtt)
 
+        openKpt = QAction(QIcon('open.png'), '&Open Keypoint', self)        
+        openKpt.setShortcut('Ctrl+K')
+        openKpt.setStatusTip('Open Keypoint file')
+        openKpt.triggered.connect(self.openKptAtt)
+        
         # Create exit action
         exitAction = QAction(QIcon('exit.png'), '&Exit', self)        
         exitAction.setShortcut('Ctrl+Q')
@@ -197,6 +204,7 @@ class VideoWindow(QMainWindow):
         #fileMenu.addAction(newAction)
         fileMenu.addAction(openAction)
         fileMenu.addAction(openAtt)
+        fileMenu.addAction(openKpt)
         fileMenu.addAction(resetAction)
         fileMenu.addSeparator()
         fileMenu.addAction(exitAction)
@@ -213,7 +221,23 @@ class VideoWindow(QMainWindow):
         roomMenu = menuBar.addMenu('&Room View')
         for a in self.roomActions:
             roomMenu.addAction(a)
-
+            
+        self.camActions = []
+        titles = ['&Room View', '&Mat View']
+        tips = ['Setup the cameras on the entire room', 'Setup the cameras focus on the mat']
+        for i in range(2):
+            action = QAction(titles[i], self, checkable=True)        
+            #action.setShortcut(str(i))
+            if i == 0: action.setChecked(True)
+            else: action.setChecked(False)
+            action.setStatusTip(tips[i])
+            action.setData(i)
+            action.triggered.connect(self.toggleCams)
+            self.camActions.append(action)         
+        camMenu = menuBar.addMenu('&Select Cameras')
+        for a in self.camActions:
+            camMenu.addAction(a)
+            
         vizLayout = QVBoxLayout()
         vizLayout.addWidget(self.showVecButton)
         vizLayout.addWidget(self.showHullButton)
@@ -259,14 +283,6 @@ class VideoWindow(QMainWindow):
         view3Dwid = QWidget()
         view3Dwid.setLayout(view3DLayout)
 
-        #splitter = QSplitter(Qt.Horizontal, frameShape=QFrame.StyledPanel,frameShadow=QFrame.Plain)
-        #splitter.setStyleSheet("QSplitter::handle{background: #444444;}") 
-        #splitter.addWidget(self.mediaPlayer)
-        #splitter.addWidget(view3Dwid)
-        #splitter.setCollapsible(0, False)
-        #splitter.setCollapsible(1, False)
-        #splitter.setStretchFactor(0,0)
-
         mainlayout = QVBoxLayout()
         mainlayout.addWidget(view3Dwid)
         mainlayout.addLayout(controlLayout)
@@ -285,30 +301,35 @@ class VideoWindow(QMainWindow):
             
     def playback(self):
         self.sliderPause()
-        position = max(0, self.positionSlider.value() - 1)
+        position = max(0, self.positionSlider.value() - 5)
         self.setPosition(position)
+        self.mediaPlayer.showImage()
         return
 
     def playfront(self):
         self.sliderPause()
-        position = min(self.mediaPlayer.duration, self.positionSlider.value() + 1)
+        position = min(self.mediaPlayer.duration, self.positionSlider.value() + 5)
         self.setPosition(position)
+        self.mediaPlayer.showImage()
         return
 
     def setFile(self, filename):
         self.mediaPlayer.set_file(filename)
-        self.playback()
         self.playButton.setEnabled(True)
         self.playBackButton.setEnabled(True)
         self.playFrontButton.setEnabled(True)
         self.positionSlider.setRange(0, self.mediaPlayer.duration)
+        
+
+        
         self.minInt.setTop(self.mediaPlayer.duration - 10)
         self.maxInt.setTop(self.mediaPlayer.duration)
-        self.correctionWidget.setHW(self.mediaPlayer.height_video, self.mediaPlayer.width_video)       
+        self.correctionWidget.setHW(self.mediaPlayer.height_video, self.mediaPlayer.width_video)      
+        self.mediaPlayer.showImage() 
 
     def openFile(self):
         fileName, _ = QFileDialog.getOpenFileName(self, "Open Video",
-                QDir.currentPath(),  "Video Files (*.avi *.mp4)", options=QFileDialog.DontUseNativeDialog)
+                QDir.currentPath(),  "Video Files (*.avi *.mp4)" )#, options=QFileDialog.DontUseNativeDialog)
         
         if fileName != '':
             self.setFile(fileName)
@@ -317,15 +338,22 @@ class VideoWindow(QMainWindow):
 
     def openFileAtt(self):
         fileName, _ = QFileDialog.getOpenFileName(self, "Open Attention",
-                QDir.currentPath(), "Text files (*.txt)", options=QFileDialog.DontUseNativeDialog)
+                QDir.currentPath(), "Text files (*.txt)")#, options=QFileDialog.DontUseNativeDialog)
 
         if fileName != '':
             self.main3Dviewer.attention = self.main3Dviewer.read_attention(fileName)
+            self.correctionWidget.update_list_frames()
+
+    def openKptAtt(self):
+        fileName, _ = QFileDialog.getOpenFileName(self, "Open Keypoint file",
+                QDir.currentPath(), "NPY files (*.npy)")#, options=QFileDialog.DontUseNativeDialog)
+
+        if fileName != '':
+            self.main3Dviewer.attention = self.main3Dviewer.read_keypoints(fileName)
 
 
     def viewSelect(self):
-        if self.mediaPlayer.thread._run_flag:
-            self.mediaPlayer.stop_video()
+        self.mediaPlayer.stop_video()
         view_id = self.sender().data()
         if view_id == 0:
             self.curr_views = [view_id]
@@ -353,11 +381,14 @@ class VideoWindow(QMainWindow):
         self.roomActions[view_id].setChecked(True)
         self.main3Dviewer.setRoomStyle(view_id)
 
-
-
+    def toggleCams(self):
+        cam_id = self.sender().data()
+        self.camActions[1-cam_id].setChecked(False)
+        self.camActions[cam_id].setChecked(True)
+        self.correctionWidget.setCams(cam_id)
+        
     def correctSelect(self):
-        if self.mediaPlayer.thread._run_flag:
-            self.mediaPlayer.stop_video()
+        self.mediaPlayer.stop_video()
         self.correctionWidget.show()
         self.correctionWidget.raise_()
         self.correctionWidget.update_frame()
@@ -369,13 +400,16 @@ class VideoWindow(QMainWindow):
 
     def closeEvent(self, event):
         self.mediaPlayer.close()
+        self.mediaPlayer.close_thread()
         self.correctionWidget.close()
         event.accept()
+
 
     def reset3D(self):
         self.main3Dviewer.reset()
 
     def play(self):
+        if self.mediaPlayer.thread is None: return
         if self.mediaPlayer.thread._run_flag:
             self.mediaPlayer.stop_video()
             self.playButton.setIcon(
@@ -410,8 +444,7 @@ class VideoWindow(QMainWindow):
         self.addPCheck.setEnabled(state)
         self.addFloorCheck.setEnabled(state)
         if state: 
-            if self.mediaPlayer.thread._run_flag:
-                self.mediaPlayer.stop_video()
+            self.mediaPlayer.stop_video()
             minf, maxf = eval(self.minFrameEdit.text()), eval(self.maxFrameEdit.text())
             if maxf <= minf: maxf = minf + 1
             if self.showVecButton.isChecked():

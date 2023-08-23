@@ -54,6 +54,8 @@ def GP(x_tr, tau = 10):
     return mean, var, value
 
 def get_uncertainty(x_tr, max_n=None):
+    if type(x_tr) == list:
+        x_tr = np.array(x_tr)
     mean, var, value = GP(x_tr)
     peaks, _ = find_peaks(value, height=2.0, distance=40, prominence=0.05)
     selected = value[peaks]

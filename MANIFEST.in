@@ -3,6 +3,7 @@ include LICENSE
 include MANIFEST.in
 global-include *.npy
 global-include *.png
+global-include *.tiff
 global-include *.jpg
 global-include *.txt
 global-include *.json
