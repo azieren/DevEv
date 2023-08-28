@@ -128,10 +128,17 @@ class CorrectionWindow(QWidget):
         self.runGPButton.setIcon(self.style().standardIcon(QStyle.SP_DialogYesButton))
         self.runGPButton.clicked.connect(self.runGP)
 
-        ## Project 3d button
-        self.project3dButton = QPushButton("&Project 3D")
-        self.project3dButton.setEnabled(True)
-        self.project3dButton.setIcon(self.style().standardIcon(QStyle.SP_MessageBoxQuestion))
+        ## Project 3d button Head
+        self.project3dButtonAtt = QPushButton("&Project 3D: Att")
+        self.project3dButtonAtt.setEnabled(True)
+        self.project3dButtonAtt.setIcon(self.style().standardIcon(QStyle.SP_MessageBoxQuestion))
+
+
+        ## Project 3d button Att
+        self.project3dButtonHead = QPushButton("&Project 3D: Head")
+        self.project3dButtonHead.setEnabled(True)
+        self.project3dButtonHead.setIcon(self.style().standardIcon(QStyle.SP_MessageBoxQuestion))
+
 
         ## Correction print
         self.showCorrectButton = QPushButton("&Show Corrected")
@@ -304,7 +311,8 @@ class CorrectionWindow(QWidget):
         featureLayout.addWidget(self.runGPButton)
 
         corrLayout = QHBoxLayout()
-        corrLayout.addWidget(self.project3dButton)
+        corrLayout.addWidget(self.project3dButtonHead)
+        corrLayout.addWidget(self.project3dButtonAtt)
         corrLayout.addWidget(self.showCorrectButton)
 
         subLayout = QVBoxLayout()
@@ -556,24 +564,30 @@ class CorrectionWindow(QWidget):
         return
 
     def project3D(self, data):
-        if len(data) < 2: return
+        if len(data) < 3: return
         if self.curr_indice == -1: return
         item = self.viewer3D.current_item
         
         print(data)
-    
         att = to_3D(data, self.cams, self.h, self.w)
-        u = att - item["head"].pos[0]
-        u = u / np.linalg.norm(u)
-        att = self.viewer3D.collision(item["head"].pos[0], u)
- 
-        p = {"pos":item["head"].pos[0], "att":att}
+        print(att)
+        
+        if data["type"] == "att":
+            u = att - item["head"].pos[0]
+            u = u / np.linalg.norm(u)
+            att = self.viewer3D.collision(item["head"].pos[0], u)
+    
+            new_vec = self.viewer3D.translate_attention_p(att[0] - self.old_x_att, att[1] - self.old_y_att, att[2] - self.old_z_att)
+            self.old_x_att,  self.old_y_att,  self.old_z_att = att[0], att[1], att[2]
+            self.change_att_direction(new_vec)
+            p = {"pos":item["head"].pos[0], "att":att}
+        else:    
+            u = self.viewer3D.translate_head(att[0] - self.old_x, att[1] - self.old_y, att[2] - self.old_z)
+            self.old_x,  self.old_y,  self.old_z = att[0], att[1], att[2]
+            self.change_att_direction(u)    
+            p = {"pos":att, "att":item["att"].pos[0]}        
+        print(p)
         poses = project_2d(p, self.cams, self.h, self.w)
-
-        new_vec = self.viewer3D.translate_attention_p(att[0] - self.old_x_att, att[1] - self.old_y_att, att[2] - self.old_z_att)
-        self.old_x_att,  self.old_y_att,  self.old_z_att = att[0], att[1], att[2]
-        self.change_att_direction(new_vec)
-
         self.pose2d.emit(poses)
         return
 

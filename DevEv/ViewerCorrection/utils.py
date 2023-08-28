@@ -121,10 +121,13 @@ def intersect(P0,P1):
 
     return p
 
-def to_3D(points, cameras, h, w):
+def to_3D_old(points, cameras, h, w):
+    hh, ww = h//4, w//2
+    print(hh, ww)
     C = []
     P = []
     for c, info in points.items():
+        if type(c) != int: continue
         x, y = info["att_p"]
         k = cameras[c]["K"]
         cam_pos = -cameras[c]["R"] @ cameras[c]["T"]
@@ -144,3 +147,20 @@ def to_3D(points, cameras, h, w):
     C, P = np.array(C), np.array(P)
     att = intersect(C, C + P)[:,0]
     return att
+
+def to_3D(points, cameras, h, w):
+    hh, ww = h//4, w//2
+
+    C = []
+    P = []
+    for c, info in points.items():
+        if type(c) != int: continue
+        P.append(np.array(info["att_p"], dtype=np.float32))
+        C.append(cameras[c])
+    c0, c1 = C[0], C[1]
+    p0, p1 = P[0], P[1]
+    p0 = cv2.undistortPoints(p0.reshape((1,1,2)), c0["mtx"], c0["dist"], None, c0["mtx"])
+    p1 = cv2.undistortPoints(p1.reshape((1,1,2)), c1["mtx"], c1["dist"], None, c1["mtx"])
+    p4d = cv2.triangulatePoints(c0["K"], c1["K"], p0, p1)
+    p3d = (p4d[:3, :]/p4d[3, :]).T
+    return p3d.reshape(3)

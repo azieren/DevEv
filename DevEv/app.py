@@ -31,7 +31,8 @@ class VideoWindow(QMainWindow):
         self.correctionWidget.pose2d.connect(self.mediaPlayer.update_image_proj)
         self.correctionWidget.open_id.connect(self.mediaPlayer.set_annotation)
         self.correctionWidget.open_id.connect(self.main3Dviewer.set_annotation)
-        self.correctionWidget.project3dButton.clicked.connect(self.mediaPlayer.send_annotation)
+        self.correctionWidget.project3dButtonAtt.clicked.connect(self.mediaPlayer.send_annotation_att)
+        self.correctionWidget.project3dButtonHead.clicked.connect(self.mediaPlayer.send_annotation_head)
         self.mediaPlayer.annotations_id.connect(self.correctionWidget.project3D)
 
         # Button

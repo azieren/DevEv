@@ -67,6 +67,7 @@ class VideoApp(QWidget):
         h, w, _ = img.shape
         if len(self.p2d) > 0:
             for c, info in self.p2d.items():
+                if type(c) != int: continue                
                 if "att" in info:
                     img = cv2.circle(img, info["att"], radius=15, color= (0,0,255), thickness=15)
                     if "head" in info: img = cv2.line(img, info["head"], info["att"],  color= (0,0,255), thickness=5)
@@ -163,8 +164,15 @@ class VideoApp(QWidget):
         self.annotation_on = state
 
     @pyqtSlot(bool)
-    def send_annotation(self, state):
+    def send_annotation_head(self, state):
+        self.clicked_att["type"] = "head"
         self.annotations_id.emit(self.clicked_att)
+
+    @pyqtSlot(bool)
+    def send_annotation_att(self, state):
+        self.clicked_att["type"] = "att"
+        self.annotations_id.emit(self.clicked_att)
+
 
     def convert_cv_qt(self, cv_img):
         """Convert from an opencv image to QPixmap"""
