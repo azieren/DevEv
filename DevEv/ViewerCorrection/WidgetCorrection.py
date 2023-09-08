@@ -568,9 +568,7 @@ class CorrectionWindow(QWidget):
         if self.curr_indice == -1: return
         item = self.viewer3D.current_item
         
-        print(data)
         att = to_3D(data, self.cams, self.h, self.w)
-        print(att)
         
         if data["type"] == "att":
             u = att - item["head"].pos[0]
@@ -586,7 +584,6 @@ class CorrectionWindow(QWidget):
             self.old_x,  self.old_y,  self.old_z = att[0], att[1], att[2]
             self.change_att_direction(u)    
             p = {"pos":att, "att":item["att"].pos[0]}        
-        print(p)
         poses = project_2d(p, self.cams, self.h, self.w)
         self.pose2d.emit(poses)
         return

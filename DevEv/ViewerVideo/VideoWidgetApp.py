@@ -167,11 +167,13 @@ class VideoApp(QWidget):
     def send_annotation_head(self, state):
         self.clicked_att["type"] = "head"
         self.annotations_id.emit(self.clicked_att)
+        self.clicked_att = {}
 
     @pyqtSlot(bool)
     def send_annotation_att(self, state):
         self.clicked_att["type"] = "att"
         self.annotations_id.emit(self.clicked_att)
+        self.clicked_att = {}
 
 
     def convert_cv_qt(self, cv_img):
