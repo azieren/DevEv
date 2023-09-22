@@ -69,12 +69,12 @@ class VideoApp(QWidget):
             for c, info in self.p2d.items():
                 if type(c) != int: continue                
                 if "att" in info:
-                    img = cv2.circle(img, info["att"], radius=15, color= (0,0,255), thickness=15)
-                    if "head" in info: img = cv2.line(img, info["head"], info["att"],  color= (0,0,255), thickness=5)
+                    img = cv2.circle(img, info["att"], radius=15, color= (0,0,255), thickness=8)
+                    if "head" in info: img = cv2.line(img, info["head"], info["att"],  color= (0,0,255), thickness=4)
                 if "head" in info:
-                    img = cv2.circle(img, info["head"], radius=5, color= (255,0,0), thickness=15)
+                    img = cv2.circle(img, info["head"], radius=4, color= (255,0,0), thickness=10)
                 if "att_v" in info:
-                    img = cv2.circle(img, info["att_v"], radius=5, color= (0,0,255), thickness=15)
+                    img = cv2.circle(img, info["att_v"], radius=4, color= (0,0,255), thickness=10)
                                 
         if self.view[0] == 0: return img
         im = []
@@ -136,6 +136,7 @@ class VideoApp(QWidget):
 
         if x < w and y < h:
             data = get_cam(x/w, y/h, self.width_video, self.height_video, self.view)
+            print("videoo clicked", data, x, y, h, w)
             for c, info in data.items():
                 if c in self.clicked_att: del self.clicked_att[c]
                 else: self.clicked_att[c] = info
@@ -225,15 +226,21 @@ def get_cam(x, y, width_video, height_video, view):
         return {c:{"att_v": [x_v, y_v], "att_p": [x_m, y_m]}}
 
     data = {}
-    for v in view:
-        c = v - 1
-        x_v, y_v = int(x*width_video//2), int(y*height_video//4)
-        if c in [1,3,5,7]: x_v += int(width_video//2)
-        if c in [2,3]: y_v += int(height_video//4)
-        elif c in [4,5]: y_v += int(height_video//2)
-        elif c in [6,7]: y_v += int(3*height_video//4)
-        x_m, y_m = int(x*width_video//2), int(y*height_video//4)
-        data[c] = {"att_v": [x_v, y_v], "att_p": [x_m, y_m]}
+    clicked = 0
+    if len(view) == 2 and y > 0.5:  
+        clicked = 1
+        y -= 0.5
+    y *= len(view)
+    #for i, v in enumerate(view):
+    c = view[clicked] - 1
+    x_v, y_v = int(x*width_video//2), int(y*height_video//4)
+    if c in [1,3,5,7]: x_v += int(width_video//2)
+    if c in [2,3]: y_v += int(height_video//4)
+    elif c in [4,5]: y_v += int(height_video//2)
+    elif c in [6,7]: y_v += int(3*height_video//4)
+    x_m, y_m = int(x*width_video//2), int(y*height_video//4)
+    data[c] = {"att_v": [x_v, y_v], "att_p": [x_m, y_m]}
+    print(c, data[c])
         
     return data
 
