@@ -237,6 +237,21 @@ class VideoWindow(QMainWindow):
         camMenu = menuBar.addMenu('&Select Cameras')
         for a in self.camActions:
             camMenu.addAction(a)
+ 
+        self.view3DAction = []
+        for i in range(8):
+            # Create exit action
+            action = QAction('&Cam '+str(i+1), self)        
+            action.setStatusTip('Set 3D view to camera '+str(i+1))
+            action.setData(i)
+            action.triggered.connect(self.view3DSelect)
+            self.view3DAction.append(action)
+                       
+        view3DMenu = menuBar.addMenu('&Set 3D View')
+        for i in range(8):
+            view3DMenu.addAction(self.view3DAction[i])
+         
+            
             
         vizLayout = QVBoxLayout()
         vizLayout.addWidget(self.showVecButton)
@@ -373,6 +388,13 @@ class VideoWindow(QMainWindow):
             else: self.viewAction[i].setChecked(False)
         self.mediaPlayer.view = sorted(self.curr_views)
         self.mediaPlayer.update_last_image()
+
+    def view3DSelect(self):
+        view_id = self.sender().data()
+        cam_type = 1
+        if self.camActions[0].isChecked(): cam_type = 0
+        self.main3Dviewer.set3DView(view_id, cam_type)
+
 
     def toggleRoomStyle(self):
         view_id = self.sender().data()

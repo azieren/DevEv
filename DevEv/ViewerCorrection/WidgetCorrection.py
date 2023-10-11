@@ -329,8 +329,7 @@ class CorrectionWindow(QWidget):
         self.update_frame()
 
     def setHW(self, h, w):
-        cam_file = pkg_resources.resource_filename('DevEv', 'metadata/CameraParameters/camera_zoom_out.npy')
-        self.cams = read_cameras(cam_file)
+        self.setCams(0)
         self.h, self.w = 2160, 1920
         return
 
@@ -339,6 +338,7 @@ class CorrectionWindow(QWidget):
         if cam_id == 1:
             cam_file = pkg_resources.resource_filename('DevEv', 'metadata/CameraParameters/camera_zoom_in.npy')
         self.cams = read_cameras(cam_file)
+        self.cam_id = cam_id
         return
 
     def select_frame(self, item):
@@ -584,7 +584,7 @@ class CorrectionWindow(QWidget):
             self.old_x,  self.old_y,  self.old_z = att[0], att[1], att[2]
             self.change_att_direction(u)    
             p = {"pos":att, "att":item["att"].pos[0]}        
-        poses = project_2d(p, self.cams, self.h, self.w)
+        poses = project_2d(p, self.cams, self.h, self.w, is_mat = self.cam_id == 1)
         self.pose2d.emit(poses)
         return
 
@@ -597,7 +597,7 @@ class CorrectionWindow(QWidget):
         att = self.viewer3D.collision(pos, u)
 
         p = {"pos":pos, "att":att}
-        poses = project_2d(p, self.cams, self.h, self.w)
+        poses = project_2d(p, self.cams, self.h, self.w, is_mat = self.cam_id == 1)
         self.pose2d.emit(poses)
         return
 

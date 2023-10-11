@@ -25,6 +25,28 @@ CocoColors = [[255, 0, 0], [255, 85, 0], [255, 170, 0], [255, 255, 0], [170, 255
               [0, 255, 85], [0, 255, 170], [0, 255, 255], [0, 170, 255], [0, 85, 255], [0, 0, 255], [85, 0, 255],
               [170, 0, 255], [255, 0, 255], [255, 0, 170]]
 
+view3Dparams_room = {
+    0: {'center': QVector3D(-0.389, 0.337, 0.361), 'distance': 3.7243, 'fov': 64.658, 'elevation': 42.0, 'azimuth': 450.0, 'viewport': None},
+    1: {'center': QVector3D(-0.586, 0.686, 0.592), 'distance': 2.929, 'fov': 72.90, 'elevation': 41.0, 'azimuth': 540.0, 'viewport': None},
+    2: {'center': QVector3D(-0.220, 2.359, -0.131), 'distance': 4.73, 'fov': 72.90, 'elevation': 38.0, 'azimuth': 269.0, 'viewport': None},
+    3: {'center': QVector3D(-0.752, -0.339, -0.823), 'distance': 4.73, 'fov': 82.20, 'elevation': 45.0, 'azimuth': 359.0, 'viewport': None},
+    4: {'center': QVector3D(-0.053, -2.836, -0.294), 'distance': 3.724, 'fov': 72.906, 'elevation': 50.0, 'azimuth': 391.0, 'viewport': None},
+    5: {'center': QVector3D(-1.433, 1.582, -1.1241), 'distance': 4.199, 'fov': 92.693, 'elevation': 58.0, 'azimuth': 358.0, 'viewport': None},
+    6: {'center': QVector3D(-0.280, 2.403, -0.318), 'distance': 3.303, 'fov': 72.906, 'elevation': 50.0, 'azimuth': 551.0, 'viewport': None},
+    7: {'center': QVector3D(0.0498, -2.123, 0.0574), 'distance': 3.303, 'fov': 72.906, 'elevation': 46.0, 'azimuth': 538.0, 'viewport': None}
+}
+
+view3Dparams_mat = {
+    0: {'center': QVector3D(1.018, 0.944, 0.587), 'distance': 0.781, 'fov': 92.68, 'elevation': 90.0, 'azimuth': 449.0, 'viewport': None},
+    1: {'center': QVector3D(0.765, 1.283, 0.0168), 'distance': 2.043, 'fov': 72.906, 'elevation': 57.0, 'azimuth': 499.0, 'viewport': None},
+    2: {'center': QVector3D(0.852, 0.767, 0.0784), 'distance': 2.043, 'fov': 72.906, 'elevation': 41.0, 'azimuth': 539.0, 'viewport': None},
+    3: {'center': QVector3D(0.976, 0.873, 0.0784), 'distance': 1.812, 'fov': 72.906, 'elevation': 90.0, 'azimuth': 270.0, 'viewport': None},
+    4: view3Dparams_room[4],
+    5: view3Dparams_room[5],
+    6: view3Dparams_room[6],
+    7: view3Dparams_room[7],
+}
+
 def plane_intersect_batch(p0, u, p_co = np.array([0,0,0]), p_no= np.array([0,0,1]), epsilon=1e-6):
     dot = np.dot(p_no , u)
     valids = abs(dot) > epsilon
@@ -133,6 +155,14 @@ class View3D(gl.GLViewWidget):
             if type(obj) == list: continue
             obj.hide()
             self.addItem(obj)
+        return
+
+    def set3DView(self, view_id, cam_type):
+        print(self.opts)
+        params = view3Dparams_room
+        if cam_type == 1:
+            params = view3Dparams_mat
+        self.opts.update(params[view_id])
         return
 
     def keyPressEvent(self, event):
@@ -323,6 +353,7 @@ class View3D(gl.GLViewWidget):
 
             mtl = self.mtl_data.contents[ob["material"][0]]
             if 'map_Kd' in  mtl:
+                
                 #if "Carpet3.png" in mtl["map_Kd"] or "SquareMat2.png" in mtl["map_Kd"]:
                 texture = {"coords":np.array(ob["textures"]).reshape(-1, 2) , "name":ob["material"][0], "mtl":self.mtl_data.contents}
                 mesh_data = gl.MeshData(vertexes=vert, faces=face)

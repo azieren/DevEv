@@ -1,6 +1,6 @@
 import numpy as np
 import cv2 
-
+from scipy.spatial.transform import Rotation
 
 def gaussian(x, mu, sig):
     return np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
@@ -53,10 +53,13 @@ def rotation_matrix_from_vectors(a, b):
     rotation_matrix = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
     return rotation_matrix
 
-def project_2d(poses, cams, h, w):
+def project_2d(poses, cams, h, w, is_mat = False):
     hh, ww = h//4, w//2
-
-    if "att" in poses: p3d = [poses["pos"], poses["att"]]
+    att_dir = None
+    if "att" in poses: 
+        p3d = [poses["pos"], poses["att"]]
+        att_dir = poses["att"] - poses["pos"]
+        att_dir = att_dir / np.linalg.norm(att_dir)
     else: p3d = [poses["pos"]]
     p2d_list = {}
     
@@ -81,6 +84,18 @@ def project_2d(poses, cams, h, w):
         if has_head: p2d_list[c]["head"] = p2d[0].astype("int")
         #if 0 < p2d[1,0] < w and 0 < p2d[1,1] < h:
         if "att" in poses and has_att: p2d_list[c]["att"] = p2d[1].astype("int")
+        if att_dir is not None: 
+            M = rotation_matrix_from_vectors(np.array([0,0,-1.0]), att_dir)
+            A  = M @ cam["R"].T
+            A = Rotation.from_matrix(A).as_euler("xyz", degrees = True)
+            A[0] = -A[0]
+            """if is_mat and c in [0,1,2,3]:     
+                M = rotation_matrix_from_vectors(np.array([0,0,1.0]), att_dir)
+                A  = M @ cam["R"].T
+                A = Rotation.from_matrix(A).as_euler("xyz", degrees = True)"""
+               
+            p2d_list[c]["angle"] = A
+            
     return p2d_list
 
 def line_intersect(pt1,u1,pt2,u2):

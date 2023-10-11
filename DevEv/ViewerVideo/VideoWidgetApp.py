@@ -7,8 +7,67 @@ import numpy as np
 import cv2
 import sys
 import os
+from scipy.spatial.transform import Rotation  
 
 from .VideoThreadApp import VideoThread
+
+
+def rotation_matrix_from_vectors(a, b):
+    # Normalize the input vectors
+    a /= np.linalg.norm(a)
+    b /= np.linalg.norm(b)
+
+    c = np.dot(a, b)
+
+    if abs(c + 1.0) < 1e-6:
+        # In this case, the vectors are exactly opposite, so we need a 180-degree rotation.
+        # A 180-degree rotation matrix around any axis is -1 times the identity matrix.
+        return -np.eye(3)
+
+    if abs(c - 1.0) < 1e-6:
+        # In this case, the vectors are already aligned, so no rotation is needed.
+        return np.eye(3)
+
+    v = np.cross(a, b)
+    s = np.linalg.norm(v)
+
+    # Skew-symmetric cross product matrix
+    kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
+
+    # Rodrigues' rotation formula
+    rotation_matrix = np.eye(3) + kmat + np.dot(kmat, kmat) * ((1 - c) / (s ** 2))
+
+    return rotation_matrix
+
+def draw_axis(img, yaw, pitch, roll, tdx=None, tdy=None, size = 50):
+    center_x = img.shape[1] // 2
+    center_y = img.shape[0] // 2
+    if tdx != None and tdy != None:
+        center_x = tdx
+        center_y = tdy
+
+    start_point = (center_x, center_y)
+
+    M = Rotation.from_euler("xyz", np.array([yaw, pitch, roll]), degrees = True).as_matrix()
+    # Define the 3D face direction vector (for example, in this case, it points right in the image plane)
+    x = M[0] / np.linalg.norm(M[0])
+    y = M[1] / np.linalg.norm(M[1])
+    z = M[2] / np.linalg.norm(M[2])
+
+    # Calculate the ending point based on the vector length (you may need to adjust the scaling)
+    end_point_x = (start_point[0] + int(x[0] * size),
+                start_point[1] + int(x[1] * size))
+    end_point_y = (start_point[0] + int(y[0] * size),
+                start_point[1] + int(y[1] * size))
+    end_point_z = (start_point[0] + int(z[0] * size*2),
+                start_point[1] + int(z[1] * size*2))
+
+    # Draw the vector onto the background image
+    thickness = 4  # Line thickness
+    cv2.line(img, start_point, end_point_x, (0, 0, 255), thickness)
+    cv2.line(img, start_point, end_point_y, (0, 255, 0), thickness)
+    cv2.line(img, start_point, end_point_z, (255, 0, 0), thickness)
+    return img
 
 class VideoApp(QWidget):
     frame_id = pyqtSignal(int)
@@ -70,11 +129,15 @@ class VideoApp(QWidget):
                 if type(c) != int: continue                
                 if "att" in info:
                     img = cv2.circle(img, info["att"], radius=15, color= (0,0,255), thickness=8)
-                    if "head" in info: img = cv2.line(img, info["head"], info["att"],  color= (0,0,255), thickness=4)
                 if "head" in info:
                     img = cv2.circle(img, info["head"], radius=4, color= (255,0,0), thickness=10)
+                    if "att" in info: img = cv2.line(img, info["head"], info["att"],  color= (0,0,255), thickness=4)
+                    elif "angle" in info: 
+                        yaw, pitch, roll = info["angle"]
+                        img = draw_axis(img, yaw, pitch, roll, tdx=info["head"][0], tdy=info["head"][1])
                 if "att_v" in info:
                     img = cv2.circle(img, info["att_v"], radius=4, color= (0,0,255), thickness=10)
+
                                 
         if self.view[0] == 0: return img
         im = []
