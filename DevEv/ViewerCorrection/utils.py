@@ -44,13 +44,30 @@ def build_mask(frames, N, sigma = 1, threshold = 30):
     return mask
 
 def rotation_matrix_from_vectors(a, b):
+    # Normalize the input vectors
+    a /= np.linalg.norm(a)
+    b /= np.linalg.norm(b)
+
     c = np.dot(a, b)
-    if c == 1.0: return np.eye(3)
+
+    if abs(c + 1.0) < 1e-6:
+        # In this case, the vectors are exactly opposite, so we need a 180-degree rotation.
+        # A 180-degree rotation matrix around any axis is -1 times the identity matrix.
+        return -np.eye(3)
+
+    if abs(c - 1.0) < 1e-6:
+        # In this case, the vectors are already aligned, so no rotation is needed.
+        return np.eye(3)
+
     v = np.cross(a, b)
-    c = np.dot(a, b)
     s = np.linalg.norm(v)
+
+    # Skew-symmetric cross product matrix
     kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
-    rotation_matrix = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
+
+    # Rodrigues' rotation formula
+    rotation_matrix = np.eye(3) + kmat + np.dot(kmat, kmat) * ((1 - c) / (s ** 2))
+
     return rotation_matrix
 
 def project_2d(poses, cams, h, w, is_mat = False):
@@ -85,15 +102,14 @@ def project_2d(poses, cams, h, w, is_mat = False):
         #if 0 < p2d[1,0] < w and 0 < p2d[1,1] < h:
         if "att" in poses and has_att: p2d_list[c]["att"] = p2d[1].astype("int")
         if att_dir is not None: 
-            M = rotation_matrix_from_vectors(np.array([0,0,-1.0]), att_dir)
+
+            M = rotation_matrix_from_vectors(np.array([0,0,1.0]), att_dir)
             A  = M @ cam["R"].T
-            A = Rotation.from_matrix(A).as_euler("xyz", degrees = True)
-            A[0] = -A[0]
-            """if is_mat and c in [0,1,2,3]:     
-                M = rotation_matrix_from_vectors(np.array([0,0,1.0]), att_dir)
-                A  = M @ cam["R"].T
-                A = Rotation.from_matrix(A).as_euler("xyz", degrees = True)"""
-               
+            Cx = Rotation.from_rotvec( cam["R"].T[0] * np.radians(180)).as_matrix()
+            Cy = Rotation.from_rotvec( cam["R"].T[1] * np.radians(180)).as_matrix()
+            A  = A @ Cx @ Cy
+            A = Rotation.from_matrix(A).as_euler("xyz",degrees = True)
+                    
             p2d_list[c]["angle"] = A
             
     return p2d_list
