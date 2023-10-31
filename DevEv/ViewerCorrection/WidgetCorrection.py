@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QStyle, QPushButton, QLabel, QVBoxLayout, QWidget, QHBoxLayout, QFileDialog, QMessageBox, QListWidget, \
-                                QAbstractItemView, QInputDialog, QListWidgetItem
+                                QAbstractItemView, QInputDialog, QListWidgetItem, QCheckBox
 from PyQt5.QtCore import pyqtSignal, QDir, Qt
 #from PyQt5.QtGui import QMessageBox
 import pyqtgraph as pg
@@ -254,6 +254,12 @@ class CorrectionWindow(QWidget):
         self.z_att_label.setBuddy(self.max_ZAEdit)
 
 
+        # Sphere Helper
+        DomeButton = QCheckBox("&Head Sphere/Dome", self)
+        DomeButton.setEnabled(True)
+        DomeButton.setChecked(False)
+        DomeButton.clicked.connect(self.viewer3D.setDome)
+
         # Layout
         layoutButton = QHBoxLayout()
         layoutButton.addWidget(self.prevframeButton)
@@ -316,6 +322,7 @@ class CorrectionWindow(QWidget):
         corrLayout.addWidget(self.showCorrectButton)
 
         subLayout = QVBoxLayout()
+        subLayout.addWidget(DomeButton)
         subLayout.addLayout(featureLayout)
         subLayout.addLayout(corrLayout)
         subLayout.addWidget(self.finishButton)
@@ -722,6 +729,7 @@ class CorrectionWindow(QWidget):
         return
 
     def write_attention(self, fileName = None, new_att = []):
+        
         if fileName is None:
             fileName, _ = QFileDialog.getSaveFileName(self, "Save Corrected Results", QDir.homePath() + "/corrected.txt", "Text files (*.txt)")
             #options=QFileDialog.DontUseNativeDialog)
@@ -732,7 +740,8 @@ class CorrectionWindow(QWidget):
             w.write("")
             for i, (f, p) in enumerate(self.viewer3D.attention.items()):
                 pos, v = p["u"][0], p["u"][1]-p["u"][0]
-                att = p["att"]
+                if p["att"] is not None:
+                    att = p["att"]
                 flag = p["corrected_flag"]
                 w.write("{:d},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:d}\n".format(
                     f, pos[0], pos[1], pos[2], v[0], v[1], v[2], att[0], att[1], att[2], flag

@@ -16,6 +16,7 @@ from scipy.spatial import ConvexHull
 from scipy import stats
 import trimesh
 from .TexturedMesh import OBJ, GLMeshTexturedItem, MTL
+from .EdgeSphere import create_semi_sphere
 
 SKELETON = [
     [1,3],[1,0],[2,4],[2,0],[0,5],[0,6],[5,7],[7,9],[6,8],[8,10],[5,11],[6,12],[11,12],[11,13],[13,15],[12,14],[14,16]
@@ -64,6 +65,7 @@ def plane_intersect_batch(p0, u, p_co = np.array([0,0,0]), p_no= np.array([0,0,1
     return p, valids
 
 
+
 class View3D(gl.GLViewWidget):
     position_sig = pyqtSignal(np.ndarray)
     direction_sig = pyqtSignal(np.ndarray)
@@ -71,7 +73,7 @@ class View3D(gl.GLViewWidget):
 
     def __init__(self):
         super(View3D, self).__init__()    
-        self.base_color = (1.0,0.0,0.0,0.5)
+        self.base_color = (1.0,0.0,0.0,0.7)
         self.base_color2 = (0.2,0.0,0.0,1.0)
         self.base_color_t = (0.8,0.8,0.8,1.0)   
         ## create three grids, add each to the view   
@@ -155,10 +157,18 @@ class View3D(gl.GLViewWidget):
             if type(obj) == list: continue
             obj.hide()
             self.addItem(obj)
+                    
+        #md = gl.MeshData.sphere(rows=10, cols=20)
+        self.semi_sphere = {"item":create_semi_sphere(radius = 0.4, num_segments = 12),
+                            "center":np.array([0,0,0]), 
+                            "show":False}
+        self.semi_sphere["item"].hide()
+        self.addItem(self.semi_sphere["item"])      
+              
+        
         return
 
     def set3DView(self, view_id, cam_type):
-        print(self.opts)
         params = view3Dparams_room
         if cam_type == 1:
             params = view3Dparams_mat
@@ -263,7 +273,7 @@ class View3D(gl.GLViewWidget):
             translation = scale_factor*R.transposed().mapVector(QVector3D(diff[0], -diff[1], 0.0))
             self.translate_head(translation[0], translation[1], 0, emit = True)
         else:
-            rotation_speed = 5.0
+            rotation_speed = 7.0
             sensitivity = self.pixelSize(self.opts['center'])
             right_vector = QVector3D(R[0, 0], R[0, 1], R[0, 2])
             up_vector = QVector3D(R[1, 0], R[1, 1], R[1, 2])
@@ -343,9 +353,6 @@ class View3D(gl.GLViewWidget):
                 continue
             if "camera" in name: continue
             #if "toy" in name: continue
-                
-                #exit()
-            #print(name)
 
             vert = np.array(ob["vertexes"]).reshape(-1, 3)
             face = np.array(ob["faces"]).reshape(-1, 3)
@@ -353,7 +360,6 @@ class View3D(gl.GLViewWidget):
 
             mtl = self.mtl_data.contents[ob["material"][0]]
             if 'map_Kd' in  mtl:
-                
                 #if "Carpet3.png" in mtl["map_Kd"] or "SquareMat2.png" in mtl["map_Kd"]:
                 texture = {"coords":np.array(ob["textures"]).reshape(-1, 2) , "name":ob["material"][0], "mtl":self.mtl_data.contents}
                 mesh_data = gl.MeshData(vertexes=vert, faces=face)
@@ -433,6 +439,18 @@ class View3D(gl.GLViewWidget):
         return
 
     def collision(self, P, U):
+        if self.semi_sphere["show"]:
+            v = self.semi_sphere["item"].vertexes + self.semi_sphere["center"].reshape(-1, 3)
+            f = self.semi_sphere["item"].faces
+            mesh = trimesh.Trimesh(vertices=v, faces=f)
+            intersection, index_ray, index_tri = mesh.ray.intersects_location(
+                        ray_origins=P.reshape(-1, 3), ray_directions=U.reshape(-1, 3))
+            if len(intersection) > 0:
+                d = np.sqrt(np.sum((P - intersection) ** 2, axis=1))
+                ind = np.argsort(d)
+                P = self.semi_sphere["center"]
+                U = intersection[ind[0]] - P
+    
         if self.mesh is None: return None
         
         ray_origins = P.reshape(-1, 3)
@@ -493,6 +511,11 @@ class View3D(gl.GLViewWidget):
         self.room.setVisible(not state)
         for obj in self.room_textured:
             obj.setVisible(not state)
+        return
+
+    def setDome(self, state):
+        self.semi_sphere["show"] = state
+        self.draw_frame(None, plot_vec=True)
         return
 
     def draw_cone(self, p0, p1, L = 2.5, n=8, R= 0.6):
@@ -705,6 +728,11 @@ class View3D(gl.GLViewWidget):
         self.current_item["head"].setData(pos = head.reshape(1,3))
         self.current_item["head"].setVisible(self.add_Head)
 
+        # Semi-Sphere
+        offset = head - self.semi_sphere["center"]
+        self.semi_sphere["item"].translate(offset[0], offset[1], offset[2])
+        self.semi_sphere["center"] = head
+        self.semi_sphere["item"].setVisible(self.semi_sphere["show"])
         
         u = self.attention[f]["u"]
         if self.line_type == 1:
@@ -996,6 +1024,11 @@ class View3D(gl.GLViewWidget):
             self.current_item["vec"].setData(pos=[new_pos, new_pos + self.default_length*u])
         else:
             self.current_item["vec"].setData(pos=[new_pos, self.current_item["att"].pos[0]])
+
+
+        # Semi Sphere
+        self.semi_sphere["item"].translate(dx, dy, dz)
+        self.semi_sphere["center"] = new_pos
 
         old_u = old_u/ np.linalg.norm(old_u)
         v = np.cross(old_u, u)
