@@ -42,10 +42,15 @@ def create_semi_sphere(radius, num_segments, color=(0.5,0.5,0.5, 0.4), edgecolor
                                          glOptions='translucent', drawEdges=True, edgeColor = None)
     
     color = np.array(list(edgecolor), dtype=float)
-    edge_color = np.repeat(np.array([color]), md.vertexes(indexed='faces').shape[0]*2*3, axis=0)
-    edge_color[1::2,-1] = 0.0
-    edge_color[2::3,-1] = 0.0
+
+    n_faces = md.faces().shape[0]
+    edge_color = np.repeat(np.array([color]), n_faces*3, axis=0)
+    edge_color[7::6,-1] = 0.0
+    edge_color[8::6,-1] = 0.0
+    #edge_color[2::3,-1] = 0.0
     sphere.edgeColors = edge_color
+    sphere.parseMeshData()
+
     return sphere
 
 class GLMeshSphereItem(GLGraphicsItem.GLGraphicsItem):

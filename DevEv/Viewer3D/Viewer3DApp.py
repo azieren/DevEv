@@ -99,7 +99,7 @@ class View3D(gl.GLViewWidget):
 
         room_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/Room.ply')
         self.mesh = trimesh.load_mesh(room_file)
-        self.read_room()
+        #self.read_room()
         att_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/attention.txt')
         self.attention = self.read_attention(att_file)
         self.keypoints = self.read_keypoints("DevEv/data_3d_DevEv_S07_04_Sync.npy")
@@ -159,7 +159,7 @@ class View3D(gl.GLViewWidget):
             self.addItem(obj)
                     
         #md = gl.MeshData.sphere(rows=10, cols=20)
-        self.semi_sphere = {"item":create_semi_sphere(radius = 0.4, num_segments = 12),
+        self.semi_sphere = {"item":create_semi_sphere(radius = 0.4, num_segments = 9),
                             "center":np.array([0,0,0]), 
                             "show":False}
         self.semi_sphere["item"].hide()
@@ -440,8 +440,10 @@ class View3D(gl.GLViewWidget):
 
     def collision(self, P, U):
         if self.semi_sphere["show"]:
-            v = self.semi_sphere["item"].vertexes + self.semi_sphere["center"].reshape(-1, 3)
-            f = self.semi_sphere["item"].faces
+            sphere = self.semi_sphere["item"].opts['meshdata']
+            v = sphere.vertexes() + self.semi_sphere["center"].reshape(-1, 3)
+            f = sphere.faces()
+
             mesh = trimesh.Trimesh(vertices=v, faces=f)
             intersection, index_ray, index_tri = mesh.ray.intersects_location(
                         ray_origins=P.reshape(-1, 3), ray_directions=U.reshape(-1, 3))
