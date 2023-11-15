@@ -123,10 +123,16 @@ class CorrectionWindow(QWidget):
         self.project2dButton.clicked.connect(self.project2D)
 
         ## Run Assistant button 
-        self.runGPButton = QPushButton("&Run Assistant")
+        self.runGPButton = QPushButton("&Run Assistant - 60")
         self.runGPButton.setEnabled(True)
         self.runGPButton.setIcon(self.style().standardIcon(QStyle.SP_DialogYesButton))
         self.runGPButton.clicked.connect(self.runGP)
+        
+        ## Run Assistant button 
+        self.runGPButton2 = QPushButton("&Run Assistant - All")
+        self.runGPButton2.setEnabled(True)
+        self.runGPButton2.setIcon(self.style().standardIcon(QStyle.SP_DialogYesButton))
+        self.runGPButton2.clicked.connect(self.runGP2)
 
         ## Project 3d button Head
         self.project3dButtonAtt = QPushButton("&Project 3D: Att")
@@ -141,7 +147,7 @@ class CorrectionWindow(QWidget):
 
 
         ## Correction print
-        self.showCorrectButton = QPushButton("&Show Corrected")
+        self.showCorrectButton = QPushButton("&Info")
         self.showCorrectButton.setEnabled(True)
         self.showCorrectButton.setIcon(self.style().standardIcon(QStyle.SP_MessageBoxQuestion))
         self.showCorrectButton.clicked.connect(self.showCorrected)
@@ -315,6 +321,7 @@ class CorrectionWindow(QWidget):
         featureLayout = QHBoxLayout()
         featureLayout.addWidget(self.project2dButton)
         featureLayout.addWidget(self.runGPButton)
+        featureLayout.addWidget(self.runGPButton2)
 
         corrLayout = QHBoxLayout()
         corrLayout.addWidget(self.project3dButtonHead)
@@ -358,9 +365,9 @@ class CorrectionWindow(QWidget):
         if value in self.frame_list:
             print("Frame already selected")
             return
-        """if value not in self.viewer3D.attention:
+        if value not in self.viewer3D.attention:
             print("Frame does not have attention")
-            return  """          
+            return          
         if ok:
             value = int(value)
             self.frame_list = np.append(self.frame_list, value)
@@ -702,7 +709,7 @@ class CorrectionWindow(QWidget):
         uncertain_scores = uncertain_scores[ind]
         self.frame_list = uncertain_frames[ind]
         print(self.frame_list)
-        print("{} Frames proposed to correct, around 2 frames/min to correct".format(len(self.frame_list)))
+        print("{} Frames proposed to correct, for finetuning".format(len(self.frame_list)))
         if len(self.frame_list) == 0:
             self.curr_indice = -1
             self.frame_listW.clear()
@@ -719,13 +726,58 @@ class CorrectionWindow(QWidget):
         self.update_frame()
         return
 
+    def runGP2(self):
+        x_tr, frame_list = [], []
+        for i, (f, p) in enumerate(self.viewer3D.attention.items()):
+            h, v = p["u"][0], p["u"][1]-p["u"][0]
+            v_n = np.linalg.norm(v)
+            if v_n <= 1e-6:
+                info = x_tr[-1]
+            else:
+                v = v/v_n
+                info = np.concatenate([h, v], axis=0)
+            x_tr.append(info)
+            frame_list.append(f)
+
+        self.write_attention("temp.txt")
+        N = len(self.viewer3D.attention) // 1800
+        uncertain_frames, uncertain_scores = get_uncertainty(x_tr, max_n= N)
+        uncertain_frames = np.array([frame_list[f] for f in uncertain_frames])
+        ind = uncertain_frames.argsort()
+        uncertain_scores = uncertain_scores[ind]
+        self.frame_list = uncertain_frames[ind]
+        print(self.frame_list)
+        print("{} Frames proposed to correct, around 2 frames/min to correct".format(len(self.frame_list)))
+        if len(self.frame_list) == 0:
+            self.curr_indice = -1
+            self.frame_listW.clear()
+            self.corrected_list = set()
+            return
+
+        self.curr_indice = 0
+        self.frame_listW.clear()
+        for f, s in zip(self.frame_list, uncertain_scores):
+            self.frame_listW.addItem(ListWidgetItem("{} - {:.2f}".format(f,s)))
+            self.viewer3D.attention[f]["corrected_flag"] = 2
+        self.frame_listW.setCurrentRow(0)
+        self.corrected_list = set()
+        self.update_frame()
+        return
+    
     def showCorrected(self):
-        if len(self.history_corrected) == 0:
-            message = "No frames"
+        message = ''
+        if self.viewer3D.segment is None:
+            message += "No segments\n"
         else:
-            message = ", ".join([ str(x) for x in self.history_corrected.keys()])
+            for i, (s,e) in enumerate(self.viewer3D.segment):
+                message += "Segment {} -> {} - {}\n".format(i, s, e)
+        if len(self.history_corrected) == 0:
+            message += "\nNo Corrected Frames"
+        else:
+            message += '\n{} Corrected Frames:\n'.format(len(self.history_corrected))
+            message += ", ".join([ str(x) for x in self.history_corrected.keys()])
         print(message)
-        QMessageBox.about(self, "List of corrected frames", message)
+        QMessageBox.about(self, "Info", message)
         return
 
     def write_attention(self, fileName = None, new_att = []):

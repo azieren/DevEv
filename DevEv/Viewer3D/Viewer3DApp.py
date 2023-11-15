@@ -96,6 +96,7 @@ class View3D(gl.GLViewWidget):
         self.a_pressed = False
         self.corrected_frames = {}
         self.default_length = 0.5
+        self.segment = None
 
         room_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/Room.ply')
         self.mesh = trimesh.load_mesh(room_file)
@@ -223,9 +224,12 @@ class View3D(gl.GLViewWidget):
             
             # Get the projection matrix
             projection = np.array(self.projectionMatrix().data(), dtype=np.float64)
-            
+            print(projection.shape, p.x(), p.y(), modelview.shape, viewport)
             # Unproject the pixel coordinate to obtain the ray in world space
-            near_point = gluUnProject(p.x(),  viewport[-1] - p.y(), 0.0, modelview, projection, viewport)
+            x = int(p.x())
+            y = int(viewport[-1]) - int(p.y())
+            near_point = gluUnProject(x, y, 0.0, modelview, projection, viewport)
+            #near_point = gluUnProject(p.x(),  viewport[-1] - p.y(), 0.0, modelview, projection, viewport)
             far_point = gluUnProject(p.x(),  viewport[-1] - p.y(), 1.0, modelview, projection, viewport)
             near_point = np.array(near_point[:3])
             far_point = np.array(far_point[:3])
@@ -633,14 +637,16 @@ class View3D(gl.GLViewWidget):
         return
 
     def read_attention(self, filename= "DevEv/metadata/RoomData/attention.txt"):
-        if not os.path.exists(filename): return
+        if not os.path.exists(filename): 
+            return
         attention = {}
         xyz = []
         self.corrected_frames = {}
         with open(filename, "r") as f:
             data = f.readlines()
 
-
+        segment = []
+        start, old_frame = None, None
         for i, d in enumerate(data):
             d_split = d.replace("\n", "").split(",")
             if len(d_split)== 10:
@@ -671,6 +677,18 @@ class View3D(gl.GLViewWidget):
             attention[int(frame)] = {"u":att_vec, "line":att_line, "head":b, "att":pos,
                                     "c_time":color_time, "size":size, "corrected_flag":flag}
             xyz.append(pos)
+            # Get segments
+            if start is None: start = int(frame)
+            if old_frame is None: 
+                old_frame = int(frame)
+                continue
+            if abs(int(frame)-old_frame) > 50:
+                segment.append((start,old_frame))
+                start = int(frame)
+            old_frame = int(frame)    
+        segment.append((start, int(frame)))  
+        self.segment = segment      
+        print("Segments", segment)    
             
         print("Attention Loaded with", len([x for x, y in self.corrected_frames.items() if y == 1]), "already corrected frames")
         print("Attention Loaded with", len([x for x, y in self.corrected_frames.items() if y == 2]), "frames selected for correction")
@@ -681,6 +699,7 @@ class View3D(gl.GLViewWidget):
         a, b = min(density), max(density)
         density = (density - a) / (b-a + 1e-6)
         density = cm.jet(density)
+        
         for i, (f, info) in enumerate(attention.items()):
             info["c_density"] = density[int(i)]             
         return attention
