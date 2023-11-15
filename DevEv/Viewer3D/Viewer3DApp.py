@@ -687,7 +687,7 @@ class View3D(gl.GLViewWidget):
                 start = int(frame)
             old_frame = int(frame)    
         segment.append((start, int(frame)))  
-        self.segment = segment      
+        self.segment = segment     
         print("Segments", segment)    
             
         print("Attention Loaded with", len([x for x, y in self.corrected_frames.items() if y == 1]), "already corrected frames")

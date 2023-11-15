@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QStyle, QPushButton, QLabel, QVBoxLayout, QWidget, QHBoxLayout, QFileDialog, QMessageBox, QListWidget, \
-                                QAbstractItemView, QInputDialog, QListWidgetItem, QCheckBox
+                                QAbstractItemView, QInputDialog, QListWidgetItem, QCheckBox, QComboBox
 from PyQt5.QtCore import pyqtSignal, QDir, Qt
 #from PyQt5.QtGui import QMessageBox
 import pyqtgraph as pg
@@ -55,6 +55,7 @@ class CorrectionWindow(QWidget):
         self.history_corrected = self.viewer3D.corrected_frames
         self.modify_att = True
         self.memory_buffer = None
+        self.segmentIndex = 0
         ## Init cameras
         self.setHW(0, 0)
 
@@ -266,6 +267,11 @@ class CorrectionWindow(QWidget):
         DomeButton.setChecked(False)
         DomeButton.clicked.connect(self.viewer3D.setDome)
 
+        # Segment Combo bos
+        self.ComboBox = QComboBox()
+        self.ComboBox.addItem('All Segments')
+        self.ComboBox.currentIndexChanged.connect(self.index_changed_combo)
+        
         # Layout
         layoutButton = QHBoxLayout()
         layoutButton.addWidget(self.prevframeButton)
@@ -327,9 +333,13 @@ class CorrectionWindow(QWidget):
         corrLayout.addWidget(self.project3dButtonHead)
         corrLayout.addWidget(self.project3dButtonAtt)
         corrLayout.addWidget(self.showCorrectButton)
+        
+        topLayout = QHBoxLayout()
+        topLayout.addWidget(DomeButton)
+        topLayout.addWidget(self.ComboBox)
 
         subLayout = QVBoxLayout()
-        subLayout.addWidget(DomeButton)
+        subLayout.addLayout(topLayout)
         subLayout.addLayout(featureLayout)
         subLayout.addLayout(corrLayout)
         subLayout.addWidget(self.finishButton)
@@ -354,6 +364,21 @@ class CorrectionWindow(QWidget):
         self.cams = read_cameras(cam_file)
         self.cam_id = cam_id
         return
+
+    def index_changed_combo(self, index):
+        self.segmentIndex = index
+        return
+    
+    def update_combobox(self):
+        self.ComboBox.clear()
+        self.ComboBox.addItem('All Segments')        
+        segments = self.viewer3D.segment
+        if segments is None: return
+        for i, (s,e) in enumerate(segments):
+            self.ComboBox.addItem('S{} -> {} -{}'.format(i, s, e))
+        self.ComboBox.setCurrentIndex(self.segmentIndex) 
+        return
+        
 
     def select_frame(self, item):
         self.curr_indice = self.frame_listW.currentRow()
@@ -632,7 +657,7 @@ class CorrectionWindow(QWidget):
             else:
                 corrected_merged.append([f])
         print(corrected_merged)        
-        self.write_attention("temp.txt")
+        self.write_attention("temp.txt", is_temp=True)
         
         min_f, max_f = min(self.viewer3D.attention.keys()), max(self.viewer3D.attention.keys())
         for seg in corrected_merged: 
@@ -698,10 +723,16 @@ class CorrectionWindow(QWidget):
             else:
                 v = v/v_n
                 info = np.concatenate([h, v], axis=0)
-            x_tr.append(info)
-            frame_list.append(f)
+            if self.segmentIndex == 0: 
+                frame_list.append(f)
+                x_tr.append(info)
+            else:
+                start, end = self.viewer3D.segment[self.segmentIndex-1]
+                if start <= f <= end: 
+                    frame_list.append(f)
+                    x_tr.append(info)
 
-        self.write_attention("temp.txt")
+        self.write_attention("temp.txt", is_temp=True)
         N = 60 #len(self.viewer3D.attention) // 1800
         uncertain_frames, uncertain_scores = get_uncertainty(x_tr, max_n= N)
         uncertain_frames = np.array([frame_list[f] for f in uncertain_frames])
@@ -736,18 +767,24 @@ class CorrectionWindow(QWidget):
             else:
                 v = v/v_n
                 info = np.concatenate([h, v], axis=0)
-            x_tr.append(info)
-            frame_list.append(f)
+            if self.segmentIndex == 0: 
+                frame_list.append(f)
+                x_tr.append(info)
+            else:
+                start, end = self.viewer3D.segment[self.segmentIndex-1]
+                if start <= f <= end: 
+                    frame_list.append(f)
+                    x_tr.append(info)
 
-        self.write_attention("temp.txt")
-        N = len(self.viewer3D.attention) // 1800
+        self.write_attention("temp.txt", is_temp=True)
+        N = len(frame_list) // 1800
         uncertain_frames, uncertain_scores = get_uncertainty(x_tr, max_n= N)
         uncertain_frames = np.array([frame_list[f] for f in uncertain_frames])
         ind = uncertain_frames.argsort()
         uncertain_scores = uncertain_scores[ind]
         self.frame_list = uncertain_frames[ind]
         print(self.frame_list)
-        print("{} Frames proposed to correct, around 2 frames/min to correct".format(len(self.frame_list)))
+        print("{} Frames proposed to correct, around 1 frames/min to correct".format(len(self.frame_list)))
         if len(self.frame_list) == 0:
             self.curr_indice = -1
             self.frame_listW.clear()
@@ -775,12 +812,12 @@ class CorrectionWindow(QWidget):
             message += "\nNo Corrected Frames"
         else:
             message += '\n{} Corrected Frames:\n'.format(len(self.history_corrected))
-            message += ", ".join([ str(x) for x in self.history_corrected.keys()])
+            message += ", ".join([ str(x) for x, y in self.history_corrected.items() if y == 1])
         print(message)
         QMessageBox.about(self, "Info", message)
         return
 
-    def write_attention(self, fileName = None, new_att = []):
+    def write_attention(self, fileName = None, is_temp = False):
         
         if fileName is None:
             fileName, _ = QFileDialog.getSaveFileName(self, "Save Corrected Results", QDir.homePath() + "/corrected.txt", "Text files (*.txt)")
@@ -799,9 +836,10 @@ class CorrectionWindow(QWidget):
                     f, pos[0], pos[1], pos[2], v[0], v[1], v[2], att[0], att[1], att[2], flag
                 ))
                 if flag > 0: self.history_corrected[f] = flag
-        self.viewer3D.read_attention(fileName)
+        if not is_temp:
+            self.viewer3D.read_attention(fileName)
         print("Corrected frames:", len([x for x, y in self.history_corrected.items() if y == 1]))
-        print("File saved")
+        print("File saved at", fileName)
         
         return
 
@@ -822,8 +860,8 @@ class CorrectionWindow(QWidget):
 
     def update_list_frames(self):
         self.history_corrected = self.viewer3D.corrected_frames
-        print(self.history_corrected)
-        if len(self.history_corrected) == 0: return
+        print("History of Corrected frames", self.history_corrected)
+        self.frame_listW.clear()
         self.frame_list = np.array([], dtype=int)
         
         for value, flag in self.history_corrected.items():
@@ -834,9 +872,13 @@ class CorrectionWindow(QWidget):
                 self.frame_listW.item(len(self.frame_list) - 1).setBackground(Qt.blue)
             
         self.frame_list = np.sort(self.frame_list)
-        self.frame_listW.setCurrentRow(0)
-        self.curr_indice = 0
+        if len(self.history_corrected) > 0: 
+            self.frame_listW.setCurrentRow(0)
+            self.curr_indice = 0
+        else:
+            self.curr_indice = -1
         self.update_frame()
+        self.update_combobox()
         return
 
     def closeEvent(self, event):
