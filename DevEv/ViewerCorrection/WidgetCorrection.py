@@ -39,7 +39,7 @@ class CorrectionWindow(QWidget):
     def __init__(self, viewer3D):
         super().__init__()
 
-        self.setWindowTitle("Correction Tool") 
+        self.setWindowTitle("Correction Tool Attention") 
         self.resize(400 , 200 )
 
         self.viewer3D = viewer3D
@@ -127,25 +127,29 @@ class CorrectionWindow(QWidget):
         self.runGPButton = QPushButton("&Run Assistant - 60")
         self.runGPButton.setEnabled(True)
         self.runGPButton.setIcon(self.style().standardIcon(QStyle.SP_DialogYesButton))
-        self.runGPButton.clicked.connect(self.runGP)
+        self.runGPButton.clicked.connect(lambda checked, param=0: self.runGP(param))
         
         ## Run Assistant button 
         self.runGPButton2 = QPushButton("&Run Assistant - All")
         self.runGPButton2.setEnabled(True)
         self.runGPButton2.setIcon(self.style().standardIcon(QStyle.SP_DialogYesButton))
-        self.runGPButton2.clicked.connect(self.runGP2)
+        self.runGPButton2.clicked.connect(lambda checked, param=1: self.runGP(param))
 
         ## Project 3d button Head
         self.project3dButtonAtt = QPushButton("&Project 3D: Att")
         self.project3dButtonAtt.setEnabled(True)
         self.project3dButtonAtt.setIcon(self.style().standardIcon(QStyle.SP_MessageBoxQuestion))
-
+        color_tuple = (1.0,0.1,0.1)  # RGB tuple (values between 0.0 and 1.0)
+        self.project3dButtonAtt.setStyleSheet(f'QPushButton {{background-color: rgb({int(color_tuple[0]*255)}, \
+            {int(color_tuple[1]*255)}, {int(color_tuple[2]*255)}); color: black;}}')
 
         ## Project 3d button Att
         self.project3dButtonHead = QPushButton("&Project 3D: Head")
         self.project3dButtonHead.setEnabled(True)
         self.project3dButtonHead.setIcon(self.style().standardIcon(QStyle.SP_MessageBoxQuestion))
-
+        color_tuple = (0.1, 0.1, 1.0)  # RGB tuple (values between 0.0 and 1.0)
+        self.project3dButtonHead.setStyleSheet(f'QPushButton {{background-color: rgb({int(color_tuple[0]*255)}, \
+            {int(color_tuple[1]*255)}, {int(color_tuple[2]*255)}); color: black;}}')
 
         ## Correction print
         self.showCorrectButton = QPushButton("&Info")
@@ -713,7 +717,7 @@ class CorrectionWindow(QWidget):
                 old_p = p                  
         return 
 
-    def runGP(self):
+    def runGP(self, param):
         x_tr, frame_list = [], []
         for i, (f, p) in enumerate(self.viewer3D.attention.items()):
             h, v = p["u"][0], p["u"][1]-p["u"][0]
@@ -733,7 +737,7 @@ class CorrectionWindow(QWidget):
                     x_tr.append(info)
 
         self.write_attention("temp.txt", is_temp=True)
-        N = 60 #len(self.viewer3D.attention) // 1800
+        N = 60 if param == 0 else len(self.viewer3D.attention) // 1800
         uncertain_frames, uncertain_scores = get_uncertainty(x_tr, max_n= N)
         uncertain_frames = np.array([frame_list[f] for f in uncertain_frames])
         ind = uncertain_frames.argsort()
@@ -757,50 +761,6 @@ class CorrectionWindow(QWidget):
         self.update_frame()
         return
 
-    def runGP2(self):
-        x_tr, frame_list = [], []
-        for i, (f, p) in enumerate(self.viewer3D.attention.items()):
-            h, v = p["u"][0], p["u"][1]-p["u"][0]
-            v_n = np.linalg.norm(v)
-            if v_n <= 1e-6:
-                info = x_tr[-1]
-            else:
-                v = v/v_n
-                info = np.concatenate([h, v], axis=0)
-            if self.segmentIndex == 0: 
-                frame_list.append(f)
-                x_tr.append(info)
-            else:
-                start, end = self.viewer3D.segment[self.segmentIndex-1]
-                if start <= f <= end: 
-                    frame_list.append(f)
-                    x_tr.append(info)
-
-        self.write_attention("temp.txt", is_temp=True)
-        N = len(frame_list) // 1800
-        uncertain_frames, uncertain_scores = get_uncertainty(x_tr, max_n= N)
-        uncertain_frames = np.array([frame_list[f] for f in uncertain_frames])
-        ind = uncertain_frames.argsort()
-        uncertain_scores = uncertain_scores[ind]
-        self.frame_list = uncertain_frames[ind]
-        print(self.frame_list)
-        print("{} Frames proposed to correct, around 1 frames/min to correct".format(len(self.frame_list)))
-        if len(self.frame_list) == 0:
-            self.curr_indice = -1
-            self.frame_listW.clear()
-            self.corrected_list = set()
-            return
-
-        self.curr_indice = 0
-        self.frame_listW.clear()
-        for f, s in zip(self.frame_list, uncertain_scores):
-            self.frame_listW.addItem(ListWidgetItem("{} - {:.2f}".format(f,s)))
-            self.viewer3D.attention[f]["corrected_flag"] = 2
-        self.frame_listW.setCurrentRow(0)
-        self.corrected_list = set()
-        self.update_frame()
-        return
-    
     def showCorrected(self):
         message = ''
         if self.viewer3D.segment is None:
@@ -829,13 +789,15 @@ class CorrectionWindow(QWidget):
             w.write("")
             for i, (f, p) in enumerate(self.viewer3D.attention.items()):
                 pos, v = p["u"][0], p["u"][1]-p["u"][0]
+                handL, handR= p["handL"], p["handR"]
                 if p["att"] is not None:
                     att = p["att"]
                 flag = p["corrected_flag"]
-                w.write("{:d},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:d}\n".format(
-                    f, pos[0], pos[1], pos[2], v[0], v[1], v[2], att[0], att[1], att[2], flag
+                flag_h = p["corrected_flag_hand"]
+                w.write("{:d},{:d},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f}\n".format(
+                    f, flag, flag_h, pos[0], pos[1], pos[2], v[0], v[1], v[2], att[0], att[1], att[2], handL[0], handL[1], handL[2], handR[0], handR[1], handR[2]
                 ))
-                if flag > 0: self.history_corrected[f] = flag
+                if flag_h > 0: self.history_corrected[f] = flag_h
         if not is_temp:
             self.viewer3D.read_attention(fileName)
         print("Corrected frames:", len([x for x, y in self.history_corrected.items() if y == 1]))
@@ -860,7 +822,7 @@ class CorrectionWindow(QWidget):
 
     def update_list_frames(self):
         self.history_corrected = self.viewer3D.corrected_frames
-        print("History of Corrected frames", self.history_corrected)
+        print("History of Corrected frames for attention", self.history_corrected)
         self.frame_listW.clear()
         self.frame_list = np.array([], dtype=int)
         

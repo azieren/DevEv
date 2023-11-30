@@ -77,18 +77,23 @@ def project_2d(poses, cams, h, w, is_mat = False):
         p3d = [poses["pos"], poses["att"]]
         att_dir = poses["att"] - poses["pos"]
         att_dir = att_dir / np.linalg.norm(att_dir)
+    elif "handL" in poses:
+        p3d = [poses["handL"], poses["handR"]]
     else: p3d = [poses["pos"]]
     p2d_list = {}
     
     for c, cam in cams.items():
-        has_head, has_att = True, True
+        has_head, has_att, has_handL, has_handR = False, False, False, False
         t = -cam["R"] @ cam["T"]
         p2d, _ = cv2.projectPoints(np.array(p3d).T, cam["r"], t, cam["mtx"], cam["dist"])
         p2d = p2d.reshape(-1,2)
-        if not (0 < p2d[0,0] < ww and 0 < p2d[0,1] < hh): has_head = False
-        if "att" in poses:
-            if not (0 < p2d[1,0] < ww and 0 < p2d[1,1] < hh): has_att = False
-
+        # Check if head is present
+        if "pos" in poses and (0 < p2d[0,0] < ww and 0 < p2d[0,1] < hh): has_head = True
+        # Check if Attention point is present
+        if "att" in poses and (0 < p2d[1,0] < ww and 0 < p2d[1,1] < hh): has_att = True
+        if "handL" in poses and (0 < p2d[0,0] < ww and 0 < p2d[0,1] < hh): has_handL = True
+        if "handR" in poses and (0 < p2d[1,0] < ww and 0 < p2d[1,1] < hh): has_handR = True
+        
         if c == 1: p2d[:,0] += ww
         elif c == 2: p2d[:,1] += hh
         elif c == 3:  p2d += np.array([ww, hh])
@@ -100,7 +105,7 @@ def project_2d(poses, cams, h, w, is_mat = False):
         #if 0 < p2d[0,0] < w and 0 < p2d[0,1] < h:
         if has_head: p2d_list[c]["head"] = p2d[0].astype("int")
         #if 0 < p2d[1,0] < w and 0 < p2d[1,1] < h:
-        if "att" in poses and has_att: p2d_list[c]["att"] = p2d[1].astype("int")
+        if has_att: p2d_list[c]["att"] = p2d[1].astype("int")
         if att_dir is not None: 
 
             M = rotation_matrix_from_vectors(np.array([0,0,1.0]), att_dir)
@@ -111,6 +116,9 @@ def project_2d(poses, cams, h, w, is_mat = False):
             A = Rotation.from_matrix(A).as_euler("xyz",degrees = True)
                     
             p2d_list[c]["angle"] = A
+        # Hands
+        if has_handL: p2d_list[c]["handL"] = p2d[0].astype("int")
+        if has_handR: p2d_list[c]["handR"] = p2d[1].astype("int")
             
     return p2d_list
 

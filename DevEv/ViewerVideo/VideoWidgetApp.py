@@ -130,13 +130,17 @@ class VideoApp(QWidget):
                 if "att" in info:
                     img = cv2.circle(img, info["att"], radius=15, color= (0,0,255), thickness=8)
                 if "head" in info:
-                    img = cv2.circle(img, info["head"], radius=4, color= (255,0,0), thickness=10)
+                    img = cv2.circle(img, info["head"], radius=4, color= (255,0,0), thickness=9)
                     if "att" in info: img = cv2.line(img, info["head"], info["att"],  color= (0,0,255), thickness=4)
                     elif "angle" in info: 
                         yaw, pitch, roll = info["angle"]
                         img = draw_axis(img, yaw, pitch, roll, tdx=info["head"][0], tdy=info["head"][1])
                 if "att_v" in info:
                     img = cv2.circle(img, info["att_v"], radius=4, color= (0,0,255), thickness=10)
+                if "handL" in info:
+                    img = cv2.circle(img, info["handL"], radius=4, color= (51,128,229), thickness=5)
+                if "handR" in info:
+                    img = cv2.circle(img, info["handR"], radius=4, color= (0,255,229), thickness=5)
 
                                 
         if self.view[0] == 0: return img
@@ -239,7 +243,18 @@ class VideoApp(QWidget):
         self.annotations_id.emit(self.clicked_att)
         self.clicked_att = {}
 
-
+    @pyqtSlot(bool)
+    def send_annotation_handL(self, state):
+        self.clicked_att["type"] = "handL"
+        self.annotations_id.emit(self.clicked_att)
+        self.clicked_att = {}
+        
+    @pyqtSlot(bool)
+    def send_annotation_handR(self, state):
+        self.clicked_att["type"] = "handR"
+        self.annotations_id.emit(self.clicked_att)
+        self.clicked_att = {}
+        
     def convert_cv_qt(self, cv_img):
         """Convert from an opencv image to QPixmap"""
         cv_img = self.select_view(cv_img)

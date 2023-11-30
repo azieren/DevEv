@@ -9,6 +9,7 @@ import sys
 from DevEv.Viewer3D.Viewer3DApp import View3D
 from DevEv.ViewerVideo.VideoWidgetApp import VideoApp
 from DevEv.ViewerCorrection.WidgetCorrection import CorrectionWindow
+from DevEv.ViewerCorrection.WidgetCorrectionHand import CorrectionWindowHand
 
 class VideoWindow(QMainWindow):
 
@@ -35,6 +36,16 @@ class VideoWindow(QMainWindow):
         self.correctionWidget.project3dButtonHead.clicked.connect(self.mediaPlayer.send_annotation_head)
         self.mediaPlayer.annotations_id.connect(self.correctionWidget.project3D)
 
+        self.correctionWidgetHands = CorrectionWindowHand(self.main3Dviewer)
+        self.correctionWidgetHands.setWindowFlags(Qt.WindowStaysOnTopHint)
+        self.correctionWidgetHands.frame_id.connect(self.setPosition)
+        self.correctionWidgetHands.pose2d.connect(self.mediaPlayer.update_image_proj)
+        self.correctionWidgetHands.open_id.connect(self.mediaPlayer.set_annotation)
+        self.correctionWidgetHands.open_id.connect(self.main3Dviewer.set_annotation)        
+        self.correctionWidgetHands.project3dButtonLeft.clicked.connect(self.mediaPlayer.send_annotation_handL)
+        self.correctionWidgetHands.project3dButtonRight.clicked.connect(self.mediaPlayer.send_annotation_handR)
+        self.mediaPlayer.annotations_id.connect(self.correctionWidgetHands.project3D)
+        
         # Button
         self.playButton = QPushButton()
         self.playButton.setEnabled(False)
@@ -139,6 +150,11 @@ class VideoWindow(QMainWindow):
         self.HeadCheck.setEnabled(True)
         self.HeadCheck.clicked.connect(self.main3Dviewer.addHeadCheck)
 
+        self.HandsCheck = QCheckBox("&Hands", self)
+        self.HandsCheck.setChecked(False)
+        self.HandsCheck.setEnabled(True)
+        self.HandsCheck.clicked.connect(self.main3Dviewer.addHandCheck)
+        
         # Create new action
         openAction = QAction(QIcon('open.png'), '&Open Video', self)        
         openAction.setShortcut('Ctrl+O')
@@ -180,11 +196,16 @@ class VideoWindow(QMainWindow):
             action.triggered.connect(self.viewSelect)
             self.viewAction.append(action)
 
-        correctAction = QAction(QIcon('exit.png'), '&Open correction tool', self)        
+        correctAction = QAction(QIcon('exit.png'), '&Att correction tool', self)        
         correctAction.setShortcut('Ctrl+C')
-        correctAction.setStatusTip('Correction Tool')
+        correctAction.setStatusTip('Correction Tool Attention')
         correctAction.triggered.connect(self.correctSelect)
 
+        correctHAction = QAction(QIcon('exit.png'), '&Hands correction tool', self)        
+        correctHAction.setShortcut('Ctrl+H')
+        correctHAction.setStatusTip('Correction Tool Hands')
+        correctHAction.triggered.connect(self.correctHSelect)
+        
         self.roomActions = []
         titles = ['&Hide Room', '&Wireframe Room', '&Transparent Room', '&Solid Room']
         tips = ['Hide 3D Room', 'Show 3D Room in wireframe', 'Show 3D Room with transparence', 'Show 3D Room']
@@ -217,6 +238,7 @@ class VideoWindow(QMainWindow):
 
         correctMenu = menuBar.addMenu('&Correction')
         correctMenu.addAction(correctAction)
+        correctMenu.addAction(correctHAction)
 
         roomMenu = menuBar.addMenu('&Room View')
         for a in self.roomActions:
@@ -278,6 +300,7 @@ class VideoWindow(QMainWindow):
         showAllLayout.addWidget(self.minFrameEdit)
         showAllLayout.addWidget(self.maxFrameEdit)
         showAllLayout.addWidget(self.HeadCheck)
+        showAllLayout.addWidget(self.HandsCheck)
         controlLayout.addLayout(showAllLayout)
         controlLayout.addLayout(vizLayout)
 
@@ -340,6 +363,7 @@ class VideoWindow(QMainWindow):
         self.minInt.setTop(self.mediaPlayer.duration - 10)
         self.maxInt.setTop(self.mediaPlayer.duration)
         self.correctionWidget.setHW(self.mediaPlayer.height_video, self.mediaPlayer.width_video)      
+        self.correctionWidgetHands.setHW(self.mediaPlayer.height_video, self.mediaPlayer.width_video)  
         self.mediaPlayer.showImage() 
 
     def openFile(self):
@@ -358,6 +382,7 @@ class VideoWindow(QMainWindow):
         if fileName != '':
             self.main3Dviewer.attention = self.main3Dviewer.read_attention(fileName)
             self.correctionWidget.update_list_frames()
+            self.correctionWidgetHands.update_list_frames()
 
     def openKptAtt(self):
         fileName, _ = QFileDialog.getOpenFileName(self, "Open Keypoint file",
@@ -408,6 +433,7 @@ class VideoWindow(QMainWindow):
         self.camActions[1-cam_id].setChecked(False)
         self.camActions[cam_id].setChecked(True)
         self.correctionWidget.setCams(cam_id)
+        self.correctionWidgetHands.setCams(cam_id)
         
     def correctSelect(self):
         self.mediaPlayer.stop_video()
@@ -417,6 +443,14 @@ class VideoWindow(QMainWindow):
         self.mediaPlayer.set_annotation(True)
         self.main3Dviewer.set_annotation(True)
 
+    def correctHSelect(self):
+        self.mediaPlayer.stop_video()
+        self.correctionWidgetHands.show()
+        self.correctionWidgetHands.raise_()
+        self.correctionWidgetHands.update_frame()
+        self.mediaPlayer.set_annotation(True)
+        self.main3Dviewer.set_annotation(True)
+        
     def exitCall(self):
         self.close()
 
@@ -424,6 +458,7 @@ class VideoWindow(QMainWindow):
         self.mediaPlayer.close()
         self.mediaPlayer.close_thread()
         self.correctionWidget.close()
+        self.correctionWidgetHands.close()
         event.accept()
 
 

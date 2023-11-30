@@ -92,6 +92,7 @@ class View3D(gl.GLViewWidget):
         self.project_floor = False
         self.fill = None
         self.add_Head = True
+        self.add_Hand = False
         self.click_enable = False
         self.a_pressed = False
         self.corrected_frames = {}
@@ -100,11 +101,11 @@ class View3D(gl.GLViewWidget):
 
         room_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/Room.ply')
         self.mesh = trimesh.load_mesh(room_file)
-        self.read_room()
+        #self.read_room()
         att_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/attention.txt')
         self.attention = self.read_attention(att_file)
-        self.keypoints = self.read_keypoints("DevEv/data_3d_DevEv_S07_04_Sync.npy")
-        self.draw_skeleton()
+        #self.keypoints = self.read_keypoints("DevEv/data_3d_DevEv_S07_04_Sync.npy")
+        #self.draw_skeleton()
         self.init()
         return
     
@@ -141,9 +142,11 @@ class View3D(gl.GLViewWidget):
         self.current_item["att"] = gl.GLScatterPlotItem(pos = u[1].reshape(1,3), color=self.base_color, size = np.array([1.0]), glOptions = 'additive')
         self.current_item["vec"] = gl.GLLinePlotItem(pos = u, color = np.array([self.base_color, self.base_color2]), width= 5.0, antialias = True, glOptions = 'additive', mode = 'lines')
         self.current_item["cone"] = self.draw_cone(u[0], u[1])
+        self.current_item["hand"] = gl.GLScatterPlotItem(glOptions = 'additive')
+        self.current_item["hand"].setData(pos = np.zeros((2,3)), color=np.array([[0.9,0.5,0.2,1.0], [0.9,1.0,0.0,1.0]]), size = np.array([15.0]))
 
         for _, obj in self.current_item.items():
-            if type(obj) == int: continue
+            if type(obj) == int or obj is None: continue
             obj.hide()
             self.addItem(obj)
 
@@ -153,9 +156,15 @@ class View3D(gl.GLViewWidget):
         self.acc_item["vec"] = gl.GLLinePlotItem(pos = u, color =c, width= 3.0, antialias = True, glOptions = 'additive', mode = 'lines')
         d, _ = self.draw_Ncone(u[:1], u[1:])
         self.acc_item["cone"] = []
+        self.acc_item["hand"] = gl.GLScatterPlotItem(glOptions = 'additive')
+        self.acc_item["hand"].setData(pos = np.zeros((2,3)), color=(0.5, 0.5, 0.0, 0.35), size = np.array([15.0]))
 
+        #self.current_item["skpoint"].hide()
+        #self.current_item["skline"].hide()
+        self.acc_item["hand"].hide()
+        
         for _, obj in self.acc_item.items():
-            if type(obj) == list: continue
+            if type(obj) == list or obj is None: continue
             obj.hide()
             self.addItem(obj)
                     
@@ -166,7 +175,6 @@ class View3D(gl.GLViewWidget):
         self.semi_sphere["item"].hide()
         self.addItem(self.semi_sphere["item"])      
               
-        
         return
 
     def set3DView(self, view_id, cam_type):
@@ -622,18 +630,7 @@ class View3D(gl.GLViewWidget):
         self.current_item["skline"].setVisible(True)
         self.addItem(self.current_item["skline"])
 
-        self.current_item["hand"] = gl.GLScatterPlotItem(glOptions = 'additive')
-        self.current_item["hand"].setData(pos = np.zeros((2,3)), color=(1.0,1.0,0.0,1.0), size = np.array([15.0]))
-        self.current_item["hand"].setVisible(True)
-        self.addItem(self.current_item["hand"])
-  
-        self.acc_item["hand"] = gl.GLScatterPlotItem(glOptions = 'additive')
-        self.acc_item["hand"].setData(pos = np.zeros((2,3)), color=(0.5, 0.5, 0.0, 0.35), size = np.array([15.0]))
-        self.addItem(self.acc_item["hand"])  
-                      
-        #self.current_item["skpoint"].hide()
-        #self.current_item["skline"].hide()
-        self.acc_item["hand"].hide()
+
         return
 
     def read_attention(self, filename= "DevEv/metadata/RoomData/attention.txt"):
@@ -642,6 +639,7 @@ class View3D(gl.GLViewWidget):
         attention = {}
         xyz = []
         self.corrected_frames = {}
+        self.corrected_frames_hand = {}
         with open(filename, "r") as f:
             data = f.readlines()
 
@@ -649,24 +647,30 @@ class View3D(gl.GLViewWidget):
         start, old_frame = None, None
         for i, d in enumerate(data):
             d_split = d.replace("\n", "").split(",")
+            xhl, yhl, zhl, xhr, yhr, zhr = 0,0,0,0,0,0
+            flag, flag_h = 0, 0
             if len(d_split)== 10:
                 frame, b0, b1, b2, A0, A1, A2, att0, att1, att2 = d_split
-                flag = 0
             elif len(d_split)== 11:
                 frame, b0, b1, b2, A0, A1, A2, att0, att1, att2, flag = d_split
+            elif len(d_split)== 18:
+                frame, flag, flag_h, b0, b1, b2, A0, A1, A2, att0, att1, att2, xhl, yhl, zhl, xhr, yhr, zhr = d_split
             elif len(d_split) < 10: continue
             else:
                 print("Error in attention file")
                 exit()
-            flag = int(flag)
+            flag, flag_h = int(flag), int(flag_h)
             pos = np.array([float(att0), float(att1), float(att2)])
             #vec = np.array([float(A0), float(A1), float(A2)])
             b = np.array([float(b0), float(b1), float(b2)])
+            handL = np.array([float(xhl), float(yhl), float(zhl)])
+            handR = np.array([float(xhr), float(yhr), float(zhr)])
             color_time = cm.jet(i / len(data))
 
             att_line = np.array([b, pos])
             size = np.linalg.norm(pos - b)
             if flag > 0: self.corrected_frames[int(frame)]= flag
+            if flag_h > 0: self.corrected_frames_hand[int(frame)]= flag_h
             if size < 1e-6: 
                 attention[int(frame)] = np.copy(attention[int(frame) - 1]).item()
                 xyz.append(xyz[-1])
@@ -674,8 +678,8 @@ class View3D(gl.GLViewWidget):
             vec = (pos - b)/ ( size + 1e-6)
             att_vec = np.array([b, b + self.default_length*vec]) 
             size = np.clip(size*2.0, 5.0, 60.0)
-            attention[int(frame)] = {"u":att_vec, "line":att_line, "head":b, "att":pos,
-                                    "c_time":color_time, "size":size, "corrected_flag":flag}
+            attention[int(frame)] = {"u":att_vec, "line":att_line, "head":b, "att":pos, "corrected_flag":flag,
+                                    "c_time":color_time, "size":size, "corrected_flag_hand":flag_h, "handL":handL,"handR":handR}
             xyz.append(pos)
             # Get segments
             if start is None: start = int(frame)
@@ -692,6 +696,8 @@ class View3D(gl.GLViewWidget):
             
         print("Attention Loaded with", len([x for x, y in self.corrected_frames.items() if y == 1]), "already corrected frames")
         print("Attention Loaded with", len([x for x, y in self.corrected_frames.items() if y == 2]), "frames selected for correction")
+        print("Hands Loaded with", len([x for x, y in self.corrected_frames_hand.items() if y == 1]), "already corrected frames")
+        print("Hands Loaded with", len([x for x, y in self.corrected_frames_hand.items() if y == 2]), "frames selected for correction")
         print(len(attention), "frames in file")
         xyz = np.array(xyz, dtype = float)
         kde = stats.gaussian_kde(xyz.T)
@@ -726,12 +732,8 @@ class View3D(gl.GLViewWidget):
         if f is None:
             f = self.current_item["frame"]                              
 
-        if f in self.keypoints:
-            self.current_item["skpoint"].setData(pos = self.keypoints[f]["p"])
-            self.current_item["skline"].setData(pos = self.keypoints[f]["l"])
-            if  self.current_item["hand"] is not None:
-                self.current_item["hand"].setData(pos = self.keypoints[f]["hand"])
-                #self.current_item["hand"].setVisible(True)
+            #self.current_item["skpoint"].setData(pos = self.keypoints[f]["p"])
+            #self.current_item["skline"].setData(pos = self.keypoints[f]["l"])
             #self.current_item["skline"].setVisible(True)
             #self.current_item["skpoint"].setVisible(True)
 
@@ -748,6 +750,10 @@ class View3D(gl.GLViewWidget):
         head = self.attention[f]["head"]
         self.current_item["head"].setData(pos = head.reshape(1,3))
         self.current_item["head"].setVisible(self.add_Head)
+        
+        # Hands
+        self.current_item["hand"].setData(pos = [self.attention[f]["handL"], self.attention[f]["handR"]])
+        self.current_item["hand"].setVisible(self.add_Hand)
 
         # Semi-Sphere
         offset = head - self.semi_sphere["center"]
@@ -963,6 +969,19 @@ class View3D(gl.GLViewWidget):
         self.current_item["head"].setVisible(state)      
         return
 
+    def addHandCheck(self, state):
+        if state:
+            #if self.drawn_h_point is not None:
+            #    self.addItem(self.drawn_h_point) 
+            pass
+        else:
+            #if self.drawn_h_point is not None and self.add_Head:
+            #    self.removeItem(self.drawn_h_point)  
+            pass
+        self.add_Hand = state 
+        self.current_item["hand"].setVisible(state)      
+        return
+
     def fill_acc(self, state):
         
         if not state:
@@ -1031,6 +1050,14 @@ class View3D(gl.GLViewWidget):
         data["u"][1] = np.copy(data["head"] + self.default_length*u)
 
         return att
+
+    def save_hands(self, frame):
+        if not frame in self.attention:
+            return False
+        data = self.attention[frame]
+        data["handL"] = np.copy(self.current_item["hand"].pos[0])
+        data["handR"] = np.copy(self.current_item["hand"].pos[1])
+        return
 
     def translate_head(self, dx, dy, dz, emit=False):
         old_head = self.current_item["head"].pos[0]
@@ -1161,6 +1188,26 @@ class View3D(gl.GLViewWidget):
         self.direction_sig.emit(u)
         return 
 
+    def translate_hand_left(self, dx, dy, dz, emit=False):
+        #old_handl = self.current_item["handL"].pos[0]
+        new_pos = self.current_item["hand"].pos[0] + np.array([dx, dy, dz])
+        self.current_item["hand"].setData(pos=[new_pos, self.current_item["hand"].pos[1]])
+
+        if emit:
+            self.position_sig.emit(new_pos)
+            return
+        return
+
+    def translate_hand_right(self, dx, dy, dz, emit=False):
+        #old_handl = self.current_item["handL"].pos[0]
+        new_pos = self.current_item["hand"].pos[1] + np.array([dx, dy, dz])
+        self.current_item["hand"].setData(pos=[self.current_item["hand"].pos[0], new_pos])
+
+        if emit:
+            self.position_sig.emit(new_pos)
+            return
+        return
+    
 def rotate(X, theta, axis='x'):
   '''Rotate multidimensional array `X` `theta` degrees around axis `axis`'''
   c, s = np.cos(theta), np.sin(theta)
