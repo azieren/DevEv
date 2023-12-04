@@ -794,7 +794,7 @@ class CorrectionWindow(QWidget):
                     att = p["att"]
                 flag = p["corrected_flag"]
                 flag_h = p["corrected_flag_hand"]
-                w.write("{:d},{:d},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f}\n".format(
+                w.write("{:d},{:d},{:d},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f}\n".format(
                     f, flag, flag_h, pos[0], pos[1], pos[2], v[0], v[1], v[2], att[0], att[1], att[2], handL[0], handL[1], handL[2], handR[0], handR[1], handR[2]
                 ))
                 if flag_h > 0: self.history_corrected[f] = flag_h

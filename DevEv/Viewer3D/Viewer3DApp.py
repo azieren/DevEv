@@ -101,7 +101,7 @@ class View3D(gl.GLViewWidget):
 
         room_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/Room.ply')
         self.mesh = trimesh.load_mesh(room_file)
-        self.read_room()
+        #self.read_room()
         att_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/attention.txt')
         self.attention = self.read_attention(att_file)
         #self.keypoints = self.read_keypoints("DevEv/data_3d_DevEv_S07_04_Sync.npy")
