@@ -2,6 +2,9 @@ import numpy as np
 import cv2 
 from scipy.spatial.transform import Rotation
 
+from PyQt5.QtWidgets import QFileDialog
+from PyQt5.QtCore import QDir
+
 def gaussian(x, mu, sig):
     return np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
 
@@ -203,3 +206,32 @@ def to_3D(points, cameras, h, w):
     p4d = cv2.triangulatePoints(c0["K"], c1["K"], p0, p1)
     p3d = (p4d[:3, :]/p4d[3, :]).T
     return p3d.reshape(3)
+
+def write_results(tool, source, fileName = None, is_temp = False):
+    
+    if fileName is None:
+        fileName, _ = QFileDialog.getSaveFileName(tool, "Save Corrected Results", QDir.homePath() + "/corrected.txt", "Text files (*.txt)")
+        #options=QFileDialog.DontUseNativeDialog)
+        if fileName == '':
+            return
+    print(tool.history_corrected)
+    with open(fileName, "w") as w:
+        w.write("")
+        for i, (f, p) in enumerate(tool.viewer3D.attention.items()):
+            pos, v = p["u"][0], p["u"][1]-p["u"][0]
+            handL, handR= p["handL"], p["handR"]
+            if p["att"] is not None:
+                att = p["att"]
+            flag = p["corrected_flag"]
+            flag_h = p["corrected_flag_hand"]
+            w.write("{:d},{:d},{:d},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f}\n".format(
+                f, flag, flag_h, pos[0], pos[1], pos[2], v[0], v[1], v[2], att[0], att[1], att[2], handL[0], handL[1], handL[2], handR[0], handR[1], handR[2]
+            ))
+            if flag_h > 0 and source == "hand": tool.history_corrected[f] = flag_h
+            if flag > 0 and source == "att": tool.history_corrected[f] = flag
+    if not is_temp:
+        tool.viewer3D.read_attention(fileName)
+    print("Corrected frames:", len([x for x, y in tool.history_corrected.items() if y == 1]))
+    print("File saved at", fileName)
+    
+    return

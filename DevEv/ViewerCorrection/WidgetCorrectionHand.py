@@ -6,13 +6,10 @@ import pyqtgraph as pg
 import copy
 import pkg_resources
 import numpy as np
-from scipy.spatial.transform import Rotation as R
-from matplotlib import pyplot as plt
 from scipy import interpolate
-from scipy.ndimage import gaussian_filter as filter1d
 
 from .GaussianProcess import get_uncertainty
-from .utils import rotation_matrix_from_vectors, project_2d, build_mask, to_3D
+from .utils import project_2d, build_mask, to_3D, write_results
 
 class ListWidgetItem(QListWidgetItem):
     def __lt__(self, other):
@@ -612,31 +609,7 @@ class CorrectionWindowHand(QWidget):
         return
 
     def write_attention(self, fileName = None, is_temp = False):
-        
-        if fileName is None:
-            fileName, _ = QFileDialog.getSaveFileName(self, "Save Corrected Results", QDir.homePath() + "/corrected.txt", "Text files (*.txt)")
-            #options=QFileDialog.DontUseNativeDialog)
-            if fileName == '':
-                return
-        print(self.history_corrected)
-        with open(fileName, "w") as w:
-            w.write("")
-            for i, (f, p) in enumerate(self.viewer3D.attention.items()):
-                pos, v = p["u"][0], p["u"][1]-p["u"][0]
-                handL, handR= p["handL"], p["handR"]
-                if p["att"] is not None:
-                    att = p["att"]
-                flag = p["corrected_flag"]
-                flag_h = p["corrected_flag_hand"]
-                w.write("{:d},{:d},{:d},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f},{:.2f}\n".format(
-                    f, flag, flag_h, pos[0], pos[1], pos[2], v[0], v[1], v[2], att[0], att[1], att[2], handL[0], handL[1], handL[2], handR[0], handR[1], handR[2]
-                ))
-                if flag_h > 0: self.history_corrected[f] = flag_h
-        if not is_temp:
-            self.viewer3D.read_attention(fileName)
-        print("Corrected frames:", len([x for x, y in self.history_corrected.items() if y == 1]))
-        print("File saved at", fileName)
-        
+        write_results(self, "hand", fileName = fileName, is_temp = is_temp)
         return
 
     def finish(self):
