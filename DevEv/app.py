@@ -165,7 +165,13 @@ class VideoWindow(QMainWindow):
         openAtt = QAction(QIcon('open.png'), '&Open Attention', self)        
         openAtt.setShortcut('Ctrl+A')
         openAtt.setStatusTip('Open attention file')
-        openAtt.triggered.connect(self.openFileAtt)
+        openAtt.triggered.connect(lambda checked, param=False: self.openFileAtt(param) )
+
+        openAtt2 = QAction(QIcon('open.png'), '&Open Attention as new', self)        
+        openAtt2.setShortcut('Ctrl+N')
+        openAtt2.setStatusTip('Open attention file without history')
+        openAtt2.triggered.connect(lambda checked, param=True: self.openFileAtt(param) )
+
 
         openKpt = QAction(QIcon('open.png'), '&Open Keypoint', self)        
         openKpt.setShortcut('Ctrl+K')
@@ -225,6 +231,7 @@ class VideoWindow(QMainWindow):
         #fileMenu.addAction(newAction)
         fileMenu.addAction(openAction)
         fileMenu.addAction(openAtt)
+        fileMenu.addAction(openAtt2)
         fileMenu.addAction(openKpt)
         fileMenu.addAction(resetAction)
         fileMenu.addSeparator()
@@ -375,12 +382,12 @@ class VideoWindow(QMainWindow):
             if not self.mediaPlayer.isVisible():
                 self.mediaPlayer.show()
 
-    def openFileAtt(self):
+    def openFileAtt(self, as_new=False):
         fileName, _ = QFileDialog.getOpenFileName(self, "Open Attention",
                 QDir.currentPath(), "Text files (*.txt)")#, options=QFileDialog.DontUseNativeDialog)
-
+        
         if fileName != '':
-            self.main3Dviewer.attention = self.main3Dviewer.read_attention(fileName)
+            self.main3Dviewer.attention = self.main3Dviewer.read_attention(fileName, as_new=as_new)
             self.correctionWidget.update_list_frames()
             self.correctionWidgetHands.update_list_frames()
 

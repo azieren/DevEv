@@ -633,7 +633,7 @@ class View3D(gl.GLViewWidget):
 
         return
 
-    def read_attention(self, filename= "DevEv/metadata/RoomData/attention.txt"):
+    def read_attention(self, filename= "DevEv/metadata/RoomData/attention.txt", as_new=False):
         if not os.path.exists(filename): 
             return
         attention = {}
@@ -669,6 +669,8 @@ class View3D(gl.GLViewWidget):
 
             att_line = np.array([b, pos])
             size = np.linalg.norm(pos - b)
+            if as_new:
+                flag, flag_h = 0, 0
             if flag > 0: self.corrected_frames[int(frame)]= flag
             if flag_h > 0: self.corrected_frames_hand[int(frame)]= flag_h
             if size < 1e-6: 
@@ -1055,9 +1057,14 @@ class View3D(gl.GLViewWidget):
         if not frame in self.attention:
             return False
         data = self.attention[frame]
+        handL_changed, handR_changed = False, False
+        if np.linalg.norm(data["handL"] - self.current_item["hand"].pos[0]) > 1e-4:
+            handL_changed = True
+        if np.linalg.norm(data["handR"] - self.current_item["hand"].pos[1]) > 1e-4:
+            handR_changed = True
         data["handL"] = np.copy(self.current_item["hand"].pos[0])
         data["handR"] = np.copy(self.current_item["hand"].pos[1])
-        return
+        return handL_changed, handR_changed
 
     def translate_head(self, dx, dy, dz, emit=False):
         old_head = self.current_item["head"].pos[0]

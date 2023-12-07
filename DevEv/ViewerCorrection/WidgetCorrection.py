@@ -71,9 +71,14 @@ class CorrectionWindow(QWidget):
         else: self.framelabel = QLabel("Frame: " + str(self.frame_list[self.curr_indice]))
         #self.nextframelabel = QLabel("Next Frame: " + str(self.frame_list[(self.curr_indice + 1) % len(self.frame_list)]))
 
+        self.addManyButton = QPushButton("++")
+        self.addManyButton.setEnabled(True)
+        self.addManyButton.setStatusTip('Add multiple frames for correction at a fixed rate')
+        self.addManyButton.clicked.connect(self.add_frame_many)
+        
         self.addButton = QPushButton("+")
         self.addButton.setEnabled(True)
-        self.addButton.setStatusTip('add a frame for correction')
+        self.addButton.setStatusTip('Add a frame for correction')
         self.addButton.clicked.connect(self.add_frame)
 
         self.removeButton = QPushButton("-")
@@ -285,6 +290,7 @@ class CorrectionWindow(QWidget):
 
         layoutFrameList = QVBoxLayout()
         layoutFrameList.addWidget(self.framelabel)
+        layoutFrameList.addWidget(self.addManyButton)
         layoutFrameList.addWidget(self.addButton)
         layoutFrameList.addWidget(self.removeButton)
         layoutFrameList.addWidget(self.copyButton)
@@ -410,6 +416,31 @@ class CorrectionWindow(QWidget):
                 self.curr_indice = 0
                 self.update_frame()
 
+    def add_frame_many(self):
+        value, ok = QInputDialog.getInt(self, 'Add frame at fixed rate', 'Enter a frame rate \n(single entry)')
+        L = list(self.viewer3D.attention.keys())
+        if value <= 5:
+            print("Frame rate too small")
+            return
+        if value >= max(L):
+            print("Frame rate too high")
+            return          
+        if ok:
+            if self.segmentIndex == 0: 
+                start, end = min(L), max(L)
+            else:
+                start, end = self.viewer3D.segment[self.segmentIndex-1]       
+            value = int(value)
+            self.frame_list = []
+            self.frame_listW.clear()
+            for x in np.arange(start, end, value, dtype=int):
+                if not x in L: continue
+                self.frame_list.append(x)
+                self.frame_listW.addItem(ListWidgetItem("{} - NA".format(x)))
+            self.frame_listW.setCurrentRow(0)
+            self.curr_indice = 0
+            self.update_frame()
+                
     def remove_frame(self):
         if len(self.frame_list) == 0: 
             return
