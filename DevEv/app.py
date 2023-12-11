@@ -225,6 +225,11 @@ class VideoWindow(QMainWindow):
             action.triggered.connect(self.toggleRoomStyle)
             self.roomActions.append(action)
 
+        load2dAction = QAction(QIcon('exit.png'), '&Compute/Load 2D', self)        
+        load2dAction.setShortcut('Ctrl+L')
+        load2dAction.setStatusTip('Compute 2D info from attention file')
+        load2dAction.triggered.connect(self.compute2D)
+        
         # Create menu bar and add action
         menuBar = self.menuBar()
         fileMenu = menuBar.addMenu('&File')
@@ -234,6 +239,7 @@ class VideoWindow(QMainWindow):
         fileMenu.addAction(openAtt2)
         fileMenu.addAction(openKpt)
         fileMenu.addAction(resetAction)
+        fileMenu.addAction(load2dAction)
         fileMenu.addSeparator()
         fileMenu.addAction(exitAction)
         
@@ -390,6 +396,10 @@ class VideoWindow(QMainWindow):
             self.main3Dviewer.attention = self.main3Dviewer.read_attention(fileName, as_new=as_new)
             self.correctionWidget.update_list_frames()
             self.correctionWidgetHands.update_list_frames()
+            self.compute2D()
+            
+    def compute2D(self):        
+        self.mediaPlayer.compute2D(self.main3Dviewer.attention, self.correctionWidget.cams)
 
     def openKptAtt(self):
         fileName, _ = QFileDialog.getOpenFileName(self, "Open Keypoint file",
@@ -449,6 +459,10 @@ class VideoWindow(QMainWindow):
         self.correctionWidget.update_frame()
         self.mediaPlayer.set_annotation(True)
         self.main3Dviewer.set_annotation(True)
+        self.mediaPlayer.viz_flags["att"] = True
+        self.mediaPlayer.viz_flags["head"] = True
+        self.mediaPlayer.headCheckBox.setChecked(True)
+        self.mediaPlayer.attCheckBox.setChecked(True)
 
     def correctHSelect(self):
         self.mediaPlayer.stop_video()
@@ -457,7 +471,11 @@ class VideoWindow(QMainWindow):
         self.correctionWidgetHands.update_frame()
         self.mediaPlayer.set_annotation(True)
         self.main3Dviewer.set_annotation(True)
-        
+        self.mediaPlayer.viz_flags["handL"] = True
+        self.mediaPlayer.viz_flags["handR"] = True
+        self.mediaPlayer.handLCheckBox.setChecked(True)
+        self.mediaPlayer.handRCheckBox.setChecked(True)
+                
     def exitCall(self):
         self.close()
 

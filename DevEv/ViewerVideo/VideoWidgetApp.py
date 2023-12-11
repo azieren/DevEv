@@ -1,5 +1,5 @@
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
-from PyQt5.QtWidgets import QLabel, QSizePolicy, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QLabel, QSizePolicy, QVBoxLayout, QWidget, QHBoxLayout, QCheckBox
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtGui import QImage, QPixmap
 
@@ -7,10 +7,11 @@ import numpy as np
 import cv2
 import sys
 import os
+import copy
 from scipy.spatial.transform import Rotation  
 
 from .VideoThreadApp import VideoThread
-
+from ..ViewerCorrection.utils import project_2d
 
 def rotation_matrix_from_vectors(a, b):
     # Normalize the input vectors
@@ -96,11 +97,37 @@ class VideoApp(QWidget):
         #self.image_label.setMaximumHeight(5)
 
         # create a vertical box layout and add the two labels
+        self.headCheckBox = QCheckBox("&Head", self)
+        self.headCheckBox.setChecked(False)
+        self.headCheckBox.setEnabled(True)
+        self.headCheckBox.clicked.connect(self.headCheck)
 
+        self.attCheckBox = QCheckBox("&Att", self)
+        self.attCheckBox.setChecked(False)
+        self.attCheckBox.setEnabled(True)
+        self.attCheckBox.clicked.connect(self.attCheck)
+
+        self.handLCheckBox = QCheckBox("&Left Hand", self)
+        self.handLCheckBox.setChecked(False)
+        self.handLCheckBox.setEnabled(True)
+        self.handLCheckBox.clicked.connect(self.handLCheck)
+
+        self.handRCheckBox = QCheckBox("&Right Hand", self)
+        self.handRCheckBox.setChecked(False)
+        self.handRCheckBox.setEnabled(True)
+        self.handRCheckBox.clicked.connect(self.handRCheck)
+        self.viz_flags = {"head":False, "att":False, "handL":False, "handR":False}
+
+        hbox = QHBoxLayout()
+        hbox.addWidget(self.textLabel, alignment=Qt.AlignBottom)
+        hbox.addWidget(self.headCheckBox, alignment=Qt.AlignBottom)
+        hbox.addWidget(self.attCheckBox, alignment=Qt.AlignBottom)
+        hbox.addWidget(self.handLCheckBox, alignment=Qt.AlignBottom)
+        hbox.addWidget(self.handRCheckBox, alignment=Qt.AlignBottom)
         
         vbox = QVBoxLayout()
         vbox.addWidget(self.image_label)#, alignment=Qt.AlignCenter)
-        vbox.addWidget(self.textLabel, alignment=Qt.AlignBottom)
+        vbox.addLayout(hbox)
         # set the vbox layout as the widgets layout
         self.setLayout(vbox)
         
@@ -108,6 +135,7 @@ class VideoApp(QWidget):
         self.duration = 0
         self.width_video, self.height_video = 0, 0
         self.last_position = 0
+        self.info2D = {}
         self.p2d = {}
         self.clicked_att = {}
         # connect its signal to the update_image slot
@@ -115,7 +143,19 @@ class VideoApp(QWidget):
         # start the thread     
         self.view = [0]
         self.setThread()
-        
+
+    def headCheck(self, state):
+        self.viz_flags["head"] = state
+
+    def attCheck(self, state):
+        self.viz_flags["att"] = state
+   
+    def handLCheck(self, state):
+        self.viz_flags["handL"] = state
+   
+    def handRCheck(self, state):
+        self.viz_flags["handR"] = state
+               
     def setThread(self):
         self.thread = VideoThread()
         self.thread.change_pixmap_signal.connect(self.update_image)
@@ -124,25 +164,29 @@ class VideoApp(QWidget):
 
     def select_view(self, img):
         h, w, _ = img.shape
+
+        if len(self.p2d) == 0 and self.last_position in self.info2D:
+            self.p2d = copy.deepcopy(self.info2D[self.last_position])
+
         if len(self.p2d) > 0:
             for c, info in self.p2d.items():
                 if type(c) != int: continue                
-                if "att" in info:
+                if "att" in info and self.viz_flags["att"]:
                     img = cv2.circle(img, info["att"], radius=15, color= (0,0,255), thickness=8)
-                if "head" in info:
+                if "head" in info and self.viz_flags["head"]:
                     img = cv2.circle(img, info["head"], radius=4, color= (255,0,0), thickness=9)
-                    if "att" in info: img = cv2.line(img, info["head"], info["att"],  color= (0,0,255), thickness=4)
-                    elif "angle" in info: 
+                    if "att" in info and self.viz_flags["att"]: img = cv2.line(img, info["head"], info["att"],  color= (0,0,255), thickness=4)
+                    elif "angle" in info and self.viz_flags["att"]: 
                         yaw, pitch, roll = info["angle"]
                         img = draw_axis(img, yaw, pitch, roll, tdx=info["head"][0], tdy=info["head"][1])
-                if "att_v" in info:
+                if "att_v" in info and self.viz_flags["att"]:
                     img = cv2.circle(img, info["att_v"], radius=4, color= (0,0,255), thickness=10)
-                if "handL" in info:
+                if "handL" in info and self.viz_flags["handL"]:
                     img = cv2.circle(img, info["handL"], radius=4, color= (51,128,229), thickness=5)
-                if "handR" in info:
+                if "handR" in info and self.viz_flags["handR"]:
                     img = cv2.circle(img, info["handR"], radius=4, color= (0,255,229), thickness=5)
 
-                                
+        self.p2d = {}                          
         if self.view[0] == 0: return img
         im = []
         for view in self.view:
@@ -155,6 +199,7 @@ class VideoApp(QWidget):
             elif view == 7: im.append(img[3*h//4:, :w//2])
             else: im.append(img[3*h//4:, w//2:])
         im = np.concatenate(im, axis=0)
+        
         return im
 
     def set_file(self, filename):
@@ -166,7 +211,7 @@ class VideoApp(QWidget):
         self.thread.position_flag = position
         second = position//self.thread.fps
         self.textLabel.setText("Time: {} mn {} \t-\t Frame: {}".format(second//60, second % 60, position))
-        self.last_position = position
+        self.last_position = int(position)
         return
 
     def update_last_image(self):
@@ -269,6 +314,14 @@ class VideoApp(QWidget):
         p = convert_to_Qt_format.scaled(self.image_label.width(), self.image_label.height(), Qt.KeepAspectRatio)
 
         return QPixmap.fromImage(p)
+    
+    def compute2D(self, attention, cams):
+        self.info2D = {}
+        for f, info in attention.items():
+            p2d = {"pos":info["head"], "att":info["att"], "handL":info["handL"], "handR":info["handR"]}
+            self.info2D[f] = project_2d(p2d, cams, self.height_video, self.width_video)
+        print("Finished computing 2D info")
+        return
         
 def get_cam(x, y, width_video, height_video, view):
     if view[0] == 0:

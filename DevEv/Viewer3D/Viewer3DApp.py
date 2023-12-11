@@ -18,6 +18,7 @@ import trimesh
 from .TexturedMesh import OBJ, GLMeshTexturedItem, MTL
 from .EdgeSphere import create_semi_sphere
 
+
 SKELETON = [
     [1,3],[1,0],[2,4],[2,0],[0,5],[0,6],[5,7],[7,9],[6,8],[8,10],[5,11],[6,12],[11,12],[11,13],[13,15],[12,14],[14,16]
 ]
@@ -107,8 +108,9 @@ class View3D(gl.GLViewWidget):
         #self.keypoints = self.read_keypoints("DevEv/data_3d_DevEv_S07_04_Sync.npy")
         #self.draw_skeleton()
         self.init()
+        
         return
-    
+       
     def reset(self):
         """
         Initialize the widget state or reset the current state to the original state.
@@ -680,8 +682,10 @@ class View3D(gl.GLViewWidget):
             vec = (pos - b)/ ( size + 1e-6)
             att_vec = np.array([b, b + self.default_length*vec]) 
             size = np.clip(size*2.0, 5.0, 60.0)
-            attention[int(frame)] = {"u":att_vec, "line":att_line, "head":b, "att":pos, "corrected_flag":flag,
+             
+            attention[int(frame)] = {"u":att_vec, "line":att_line, "head":b, "att":pos, "corrected_flag":flag, 
                                     "c_time":color_time, "size":size, "corrected_flag_hand":flag_h, "handL":handL,"handR":handR}
+        
             xyz.append(pos)
             # Get segments
             if start is None: start = int(frame)
