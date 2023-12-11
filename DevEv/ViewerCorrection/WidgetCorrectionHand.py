@@ -560,7 +560,7 @@ class CorrectionWindowHand(QWidget):
                                 
             print(seg, start, end)
             mask = build_mask([x-start for x in seg], end-start+1, threshold = threshold)[:, np.newaxis]
-            interp_list = [start] + seg + [end]
+            interp_list = np.unique([start] + seg + [end])
             interp_poses = []
             for f in interp_list:
                 p = self.viewer3D.attention[f]

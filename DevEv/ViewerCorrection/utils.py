@@ -214,7 +214,7 @@ def write_results(tool, source, fileName = None, is_temp = False):
         #options=QFileDialog.DontUseNativeDialog)
         if fileName == '':
             return
-    print(tool.history_corrected)
+    print("Writing ", tool.history_corrected)
     with open(fileName, "w") as w:
         w.write("")
         for i, (f, p) in enumerate(tool.viewer3D.attention.items()):

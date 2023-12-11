@@ -203,7 +203,7 @@ class VideoApp(QWidget):
 
         if x < w and y < h:
             data = get_cam(x/w, y/h, self.width_video, self.height_video, self.view)
-            print("videoo clicked", data, x, y, h, w)
+            print("video clicked", data, x, y, h, w)
             for c, info in data.items():
                 if c in self.clicked_att: del self.clicked_att[c]
                 else: self.clicked_att[c] = info
