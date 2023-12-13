@@ -6,14 +6,23 @@ from scipy.signal import find_peaks
 from scipy.stats import multivariate_normal
 
 def read_data(filename):
+    import os
+    if not os.path.exists(filename):
+        print("file not found")
+        exit()
     with open(filename, "r") as f:
         data = f.readlines()
 
     x_list = []
     count = 0
     for d in data:
-        if len(d) <= 10: continue
-        fid, x, y, z, y, p, r, _,_,_ = d.split(",")
+        d = d.split(",")
+
+        if len(d) == 10: 
+            fid, x, y, z, y, p, r, _,_,_ = d
+        elif len(d)== 18:
+            fid, flag, flag_h, x, y, z, y, p, r, att0, att1, att2, xhl, yhl, zhl, xhr, yhr, zhr = d
+        else: continue
         x_list.append([float(x), float(y), float(z), float(y), float(p), float(r)])
         count += 1
         #if count > 2100: break
@@ -60,9 +69,10 @@ def get_uncertainty(x_tr, max_n=None):
     mean, var, value = GP(x_tr)
     value = var.mean(-1).mean(-1)
     value = (value - min(value)) / (max(value) - min(value))
-    peaks, _ = find_peaks(value, height=value.mean(), distance=30, prominence=0.05)
+    peaks, _ = find_peaks(value, height=max(0.05, value.mean() + 0.5*value.std() ), distance=30, prominence=0.01)
     selected = value[peaks]
     if max_n is not None:
+        if len(peaks) < max_n: peaks, _ = find_peaks(value, height=0.05, distance=50, prominence=0.01)
         ind_selected = value[peaks].argsort()[::-1]
         ind_selected = ind_selected[:max_n]
         selected = selected[ind_selected]
@@ -72,9 +82,12 @@ def get_uncertainty(x_tr, max_n=None):
 def uncertainty(filename):
 
     x_tr, y_tr = read_data(filename)
+    print(x_tr.shape)
     mean, var, value = GP(x_tr)
-
-    peaks, _ = find_peaks(value, height=2.0, distance=40, prominence=0.05)
+    
+    value = var.mean(-1).mean(-1)
+    value = (value - min(value)) / (max(value) - min(value))
+    peaks, _ = find_peaks(value, height=max(0.05, value.mean() + 0.5*value.std() ), distance=30, prominence=0.01)
 
     m = mean[:,0]
     err = np.sqrt(var[:, 0, 0])
@@ -85,7 +98,7 @@ def uncertainty(filename):
     plt.ylabel("x Offset")
     plt.xlabel("Time")
     plt.legend()
-    plt.savefig("data/GP_x.png")
+    plt.savefig("GP_x.png")
     plt.close()
 
     plt.plot(np.arange(len(value)),  value, "-g", label='logpdf')
@@ -94,13 +107,13 @@ def uncertainty(filename):
     plt.ylabel("logpdf")
     plt.xlabel("Time")
     plt.legend()
-    plt.savefig("data/GP_selected.png")
+    plt.savefig("GP_selected.png")
     plt.close()
 
 
     peaks = [str(p) for p in peaks]
-    with open("data/results.txt","a") as f:
-        f.write(",".join(peaks))
+    #with open("data/results.txt","a") as f:
+    #    f.write(",".join(peaks))
     return peaks
 
 if __name__ == "__main__":
@@ -108,8 +121,10 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--num-samples", default=15, type=int)
     parser.add_argument("--show-plots", action="store_true")
-    parser.add_argument("-f", default="data/attention.txt", type=str)
+    parser.add_argument("-f", default="C:/Users/nicol/Downloads/attC_DevEv_S20_06_Sync (1).txt", type=str)
     args = parser.parse_args()
 
     p = uncertainty(args.f)
+    print(len(p))
+    print(p)
     
