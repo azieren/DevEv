@@ -76,26 +76,36 @@ def rotation_matrix_from_vectors(a, b):
 def project_2d(poses, cams, h, w, is_mat = False):
     hh, ww = h//4, w//2
     att_dir = None
+    p3d , index = [], {}
+    
+    if "pos" in poses: 
+        p3d = p3d + [poses["pos"]]
+        index["pos"] = 0
     if "att" in poses: 
-        p3d = [poses["pos"], poses["att"]]
+        p3d = p3d + [poses["att"]]
         att_dir = poses["att"] - poses["pos"]
         att_dir = att_dir / np.linalg.norm(att_dir)
-    elif "handL" in poses:
-        p3d = [poses["handL"], poses["handR"]]
-    else: p3d = [poses["pos"]]
-    p2d_list = {}
+        index["att"] = len(p3d) - 1
+    if "handL" in poses: 
+        p3d = p3d + [poses["handL"]]
+        index["handL"] = len(p3d) - 1
+    if "handR" in poses: 
+        p3d = p3d + [poses["handR"]]
+        index["handR"] = len(p3d) - 1
     
+    p2d_list = {}
     for c, cam in cams.items():
         has_head, has_att, has_handL, has_handR = False, False, False, False
         t = -cam["R"] @ cam["T"]
         p2d, _ = cv2.projectPoints(np.array(p3d).T, cam["r"], t, cam["mtx"], cam["dist"])
         p2d = p2d.reshape(-1,2)
         # Check if head is present
-        if "pos" in poses and (0 < p2d[0,0] < ww and 0 < p2d[0,1] < hh): has_head = True
+        if "pos" in poses and (0 < p2d[index["pos"],0] < ww and 0 < p2d[index["pos"],1] < hh): has_head = True
         # Check if Attention point is present
-        if "att" in poses and (0 < p2d[1,0] < ww and 0 < p2d[1,1] < hh): has_att = True
-        if "handL" in poses and (0 < p2d[0,0] < ww and 0 < p2d[0,1] < hh): has_handL = True
-        if "handR" in poses and (0 < p2d[1,0] < ww and 0 < p2d[1,1] < hh): has_handR = True
+        if "att" in poses and (0 < p2d[index["att"],0] < ww and 0 < p2d[index["att"],1] < hh): has_att = True
+        if "handL" in poses and (0 < p2d[index["handL"],0] < ww and 0 < p2d[index["handL"],1] < hh): has_handL = True
+        if "handR" in poses and (0 < p2d[index["handR"],0] < ww and 0 < p2d[index["handR"],1] < hh): has_handR = True
+            
         
         if c == 1: p2d[:,0] += ww
         elif c == 2: p2d[:,1] += hh
@@ -106,9 +116,9 @@ def project_2d(poses, cams, h, w, is_mat = False):
         elif c == 7:  p2d += np.array([ww, 3*hh])
         p2d_list[c] = {}
         #if 0 < p2d[0,0] < w and 0 < p2d[0,1] < h:
-        if has_head: p2d_list[c]["head"] = p2d[0].astype("int")
+        if has_head: p2d_list[c]["head"] = p2d[index["pos"]].astype("int")
         #if 0 < p2d[1,0] < w and 0 < p2d[1,1] < h:
-        if has_att: p2d_list[c]["att"] = p2d[1].astype("int")
+        if has_att: p2d_list[c]["att"] = p2d[index["att"]].astype("int")
         if att_dir is not None: 
 
             M = rotation_matrix_from_vectors(np.array([0,0,1.0]), att_dir)
@@ -120,8 +130,8 @@ def project_2d(poses, cams, h, w, is_mat = False):
                     
             p2d_list[c]["angle"] = A
         # Hands
-        if has_handL: p2d_list[c]["handL"] = p2d[0].astype("int")
-        if has_handR: p2d_list[c]["handR"] = p2d[1].astype("int")
+        if has_handL: p2d_list[c]["handL"] = p2d[index["handL"]].astype("int")
+        if has_handR: p2d_list[c]["handR"] = p2d[index["handR"]].astype("int")
             
     return p2d_list
 
