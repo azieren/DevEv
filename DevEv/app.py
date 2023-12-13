@@ -396,7 +396,7 @@ class VideoWindow(QMainWindow):
             self.main3Dviewer.attention = self.main3Dviewer.read_attention(fileName, as_new=as_new)
             self.correctionWidget.update_list_frames()
             self.correctionWidgetHands.update_list_frames()
-            self.compute2D()
+            #self.compute2D()
             
     def compute2D(self):        
         self.mediaPlayer.compute2D(self.main3Dviewer.attention, self.correctionWidget.cams)
