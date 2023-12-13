@@ -24,7 +24,7 @@ def read_data(filename):
     return x_list, y_list
 
 
-def GP(x_tr, tau = 10):
+def GP(x_tr, tau = 20):
     mean, var, value = [], [], []
     N, D = x_tr.shape
     for t, x in enumerate(x_tr):
@@ -36,8 +36,9 @@ def GP(x_tr, tau = 10):
         if np.nan in mu or np.inf in mu:
             print(t, tau_min, tau_max, segment.shape)
             exit()
-        temp = segment - mu
-        sigma = np.dot(temp.T, temp)/(tau+1)
+        #temp = segment - mu
+        #sigma = np.dot(temp.T, temp)/(tau+1)
+        sigma = np.cov(segment.T)
 
         mvg = multivariate_normal(mean=mu, cov=sigma, allow_singular=True)
         v = mvg.logpdf(x)/ mu.shape[0]
@@ -57,7 +58,9 @@ def get_uncertainty(x_tr, max_n=None):
     if type(x_tr) == list:
         x_tr = np.array(x_tr)
     mean, var, value = GP(x_tr)
-    peaks, _ = find_peaks(value, height=2.0, distance=40, prominence=0.05)
+    value = var.mean(-1).mean(-1)
+    value = (value - min(value)) / (max(value) - min(value))
+    peaks, _ = find_peaks(value, height=value.mean(), distance=30, prominence=0.05)
     selected = value[peaks]
     if max_n is not None:
         ind_selected = value[peaks].argsort()[::-1]

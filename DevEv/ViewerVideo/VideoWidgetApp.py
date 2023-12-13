@@ -325,8 +325,9 @@ class VideoApp(QWidget):
         for f, info in attention.items():
             p2d = {"pos":info["head"], "att":info["att"], "handL":info["handL"], "handR":info["handR"]}
             self.info2D[f] = project_2d(p2d, cams, self.height_video, self.width_video)
-            if i % 1000 == 0:
+            if i % 5000 == 0:
                 print("{}/{} for 2D computation".format(i, len(attention)))
+            i+=1
         print("Finished computing 2D info")
         return
         
