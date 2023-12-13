@@ -683,7 +683,7 @@ class View3D(gl.GLViewWidget):
             att_vec = np.array([b, b + self.default_length*vec]) 
             size = np.clip(size*2.0, 5.0, 60.0)
              
-            attention[int(frame)] = {"u":att_vec, "line":att_line, "head":b, "att":pos, "corrected_flag":flag, 
+            attention[int(frame)] = {"u":att_vec, "line":att_line, "head":b, "att":pos, "corrected_flag":flag, "c_density":(1.0,1.0,1.0,1.0),
                                     "c_time":color_time, "size":size, "corrected_flag_hand":flag_h, "handL":handL,"handR":handR}
         
             xyz.append(pos)
@@ -705,7 +705,8 @@ class View3D(gl.GLViewWidget):
         print("Hands Loaded with", len([x for x, y in self.corrected_frames_hand.items() if y == 1]), "already corrected frames")
         print("Hands Loaded with", len([x for x, y in self.corrected_frames_hand.items() if y == 2]), "frames selected for correction")
         print(len(attention), "frames in file")
-        xyz = np.array(xyz, dtype = float)
+        
+        """xyz = np.array(xyz, dtype = float)
         kde = stats.gaussian_kde(xyz.T)
         density = kde(xyz.T)   
         a, b = min(density), max(density)
@@ -713,7 +714,7 @@ class View3D(gl.GLViewWidget):
         density = cm.jet(density)
         
         for i, (f, info) in enumerate(attention.items()):
-            info["c_density"] = density[int(i)]             
+            info["c_density"] = density[int(i)]   """          
         return attention
 
     def read_keypoints(self, filename):

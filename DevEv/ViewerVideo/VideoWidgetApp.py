@@ -70,6 +70,27 @@ def draw_axis(img, yaw, pitch, roll, tdx=None, tdy=None, size = 50):
     cv2.line(img, start_point, end_point_z, (255, 0, 0), thickness)
     return img
 
+
+def draw_info_view(img, p2d, flag = None):
+    if flag is None: flag = {"att":True, "head":True, "handL":True, "handR":True}
+    for c, info in p2d.items():
+        if type(c) != int: continue                
+        if "att" in info and flag["att"]:
+            img = cv2.circle(img, info["att"], radius=15, color= (0,0,255), thickness=8)
+        if "head" in info and flag["head"]:
+            img = cv2.circle(img, info["head"], radius=4, color= (255,0,0), thickness=9)
+            if "att" in info and flag["att"]: img = cv2.line(img, info["head"], info["att"],  color= (0,0,255), thickness=4)
+            elif "angle" in info and flag["att"]: 
+                yaw, pitch, roll = info["angle"]
+                img = draw_axis(img, yaw, pitch, roll, tdx=info["head"][0], tdy=info["head"][1])
+        if "att_v" in info and flag["att"]:
+            img = cv2.circle(img, info["att_v"], radius=4, color= (0,0,255), thickness=10)
+        if "handL" in info and flag["handL"]:
+            img = cv2.circle(img, info["handL"], radius=4, color= (51,128,229), thickness=5)
+        if "handR" in info and flag["handR"]:
+            img = cv2.circle(img, info["handR"], radius=4, color= (0,255,229), thickness=5)
+    return img
+
 class VideoApp(QWidget):
     frame_id = pyqtSignal(int)
     annotations_id = pyqtSignal(dict)
@@ -166,27 +187,10 @@ class VideoApp(QWidget):
         h, w, _ = img.shape
 
         if len(self.p2d) == 0 and self.last_position in self.info2D:
-            self.p2d = copy.deepcopy(self.info2D[self.last_position])
-
-        if len(self.p2d) > 0:
-            for c, info in self.p2d.items():
-                if type(c) != int: continue                
-                if "att" in info and self.viz_flags["att"]:
-                    img = cv2.circle(img, info["att"], radius=15, color= (0,0,255), thickness=8)
-                if "head" in info and self.viz_flags["head"]:
-                    img = cv2.circle(img, info["head"], radius=4, color= (255,0,0), thickness=9)
-                    if "att" in info and self.viz_flags["att"]: img = cv2.line(img, info["head"], info["att"],  color= (0,0,255), thickness=4)
-                    elif "angle" in info and self.viz_flags["att"]: 
-                        yaw, pitch, roll = info["angle"]
-                        img = draw_axis(img, yaw, pitch, roll, tdx=info["head"][0], tdy=info["head"][1])
-                if "att_v" in info and self.viz_flags["att"]:
-                    img = cv2.circle(img, info["att_v"], radius=4, color= (0,0,255), thickness=10)
-                if "handL" in info and self.viz_flags["handL"]:
-                    img = cv2.circle(img, info["handL"], radius=4, color= (51,128,229), thickness=5)
-                if "handR" in info and self.viz_flags["handR"]:
-                    img = cv2.circle(img, info["handR"], radius=4, color= (0,255,229), thickness=5)
-
-        self.p2d = {}                          
+            img = draw_info_view(img, self.info2D[self.last_position], flag = self.viz_flags)
+        elif len(self.p2d) > 0:
+            img = draw_info_view(img, self.p2d)
+                 
         if self.view[0] == 0: return img
         im = []
         for view in self.view:
@@ -317,9 +321,12 @@ class VideoApp(QWidget):
     
     def compute2D(self, attention, cams):
         self.info2D = {}
+        i = 0
         for f, info in attention.items():
             p2d = {"pos":info["head"], "att":info["att"], "handL":info["handL"], "handR":info["handR"]}
             self.info2D[f] = project_2d(p2d, cams, self.height_video, self.width_video)
+            if i % 1000 == 0:
+                print("{}/{} for 2D computation".format(i, len(attention)))
         print("Finished computing 2D info")
         return
         
