@@ -86,6 +86,7 @@ class View3D(gl.GLViewWidget):
         self.drawn_t_item = None
         self.drawn_t_point = None
         self.drawn_h_point = None
+        self.drawn_hand_point = None
         self.accumulate = {}
         self.line_type = 0
         self.color_code = False
@@ -102,7 +103,7 @@ class View3D(gl.GLViewWidget):
 
         room_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/Room.ply')
         self.mesh = trimesh.load_mesh(room_file)
-        self.read_room()
+        #self.read_room()
         att_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/attention.txt')
         self.attention = self.read_attention(att_file)
         #self.keypoints = self.read_keypoints("DevEv/data_3d_DevEv_S07_04_Sync.npy")
@@ -145,7 +146,7 @@ class View3D(gl.GLViewWidget):
         self.current_item["vec"] = gl.GLLinePlotItem(pos = u, color = np.array([self.base_color, self.base_color2]), width= 5.0, antialias = True, glOptions = 'additive', mode = 'lines')
         self.current_item["cone"] = self.draw_cone(u[0], u[1])
         self.current_item["hand"] = gl.GLScatterPlotItem(glOptions = 'additive')
-        self.current_item["hand"].setData(pos = np.zeros((2,3)), color=np.array([[0.9,0.5,0.2,1.0], [0.9,1.0,0.0,1.0]]), size = np.array([15.0]))
+        self.current_item["hand"].setData(pos = np.zeros((2,3)), color=np.array([[0.9,0.5,0.2,1.0], [0.9,1.0,0.0,1.0]]), size = np.array([12.0]))
 
         for _, obj in self.current_item.items():
             if type(obj) == int or obj is None: continue
@@ -159,7 +160,7 @@ class View3D(gl.GLViewWidget):
         d, _ = self.draw_Ncone(u[:1], u[1:])
         self.acc_item["cone"] = []
         self.acc_item["hand"] = gl.GLScatterPlotItem(glOptions = 'additive')
-        self.acc_item["hand"].setData(pos = np.zeros((2,3)), color=(0.5, 0.5, 0.0, 0.35), size = np.array([15.0]))
+        self.acc_item["hand"].setData(pos = np.zeros((2,3)), color=(0.5, 0.5, 0.0, 0.35), size = np.array([12.0]))
 
         #self.current_item["skpoint"].hide()
         #self.current_item["skline"].hide()
@@ -534,7 +535,7 @@ class View3D(gl.GLViewWidget):
         self.draw_frame(None, plot_vec=True)
         return
 
-    def draw_cone(self, p0, p1, L = 2.5, n=8, R= 0.6):
+    def draw_cone(self, p0, p1, L = 2.5, n=8, R= 0.6, just_data = False):
         # vector in direction of axis
         R0, R1 = 0, R
         v = p1 - p0
@@ -562,10 +563,11 @@ class View3D(gl.GLViewWidget):
                 np.sin(theta) * n1[i] + R * np.cos(theta) * n2[i] for i in [0, 1, 2]]
 
         P = np.array([X.flatten(), Y.flatten(), Z.flatten()]).T
+        p = np.append([p0], P, axis =0) 
         faces1 = np.array([[0,i+1, i] for i in range(len(P))])
         faces1[-1,-2] = 1
-        p = np.append([p0], P, axis =0) 
         d = gl.MeshData(vertexes=p, faces=faces1)
+        if just_data: return d
         #d.setFaceColors(self.base_color)
         cone = gl.GLMeshItem(meshdata=d, glOptions = 'translucent', drawEdges=True, computeNormals=False, color=self.base_color)   
         return cone
@@ -776,7 +778,7 @@ class View3D(gl.GLViewWidget):
         self.current_item["vec"].setVisible(plot_vec and self.line_type in [0,1])
 
         
-        old_u = old_u/ np.linalg.norm(old_u)
+        """old_u = old_u/ np.linalg.norm(old_u)
         u = u[1] - u[0]
         u = u/ np.linalg.norm(u)
         v = np.cross(old_u, u)
@@ -787,7 +789,8 @@ class View3D(gl.GLViewWidget):
             a = np.arccos(a)*180.0/np.pi
             self.current_item["cone"].translate(-old_pos[0], -old_pos[1], -old_pos[2])
             self.current_item["cone"].rotate(a, v[0], v[1], v[2])
-            self.current_item["cone"].translate(head[0], head[1], head[2])
+            self.current_item["cone"].translate(head[0], head[1], head[2])"""
+        self.current_item["cone"].setMeshData(meshdata=self.draw_cone(u[0], u[1], just_data=True))
         self.current_item["cone"].setVisible(plot_vec and self.line_type == 2)
         self.current_item["frame"] = f
 
@@ -797,25 +800,29 @@ class View3D(gl.GLViewWidget):
                 acc_vecs = np.copy(self.current_item["vec"].pos).reshape(2,3)
                 acc_att = np.copy(att).reshape(1,3)
                 acc_size = np.copy(size_p).reshape(1)
+                acc_hands = np.copy(self.current_item["hand"].pos).reshape(2,3)
 
-                if f in self.keypoints and self.keypoints[f]["hand"] is not None: 
-                    acc_hand = np.copy(self.keypoints[f]["hand"]).reshape(2,3)
-                    self.acc_item["hand"].setVisible(False)
+                #if f in self.keypoints and self.keypoints[f]["hand"] is not None: 
+                #    acc_hand = np.copy(self.keypoints[f]["hand"]).reshape(2,3)
+                #    self.acc_item["hand"].setVisible(False)
                 self.acc_item["head"].setVisible(self.add_Head)
                 self.acc_item["vec"].setVisible(plot_vec and self.line_type in [0,1])
-                self.acc_item["att"].setVisible(plot_vec and not self.line_type == 3)       
+                self.acc_item["att"].setVisible(plot_vec and not self.line_type == 3)      
+                self.acc_item["hand"].setVisible(self.add_Hand) 
             else:
                 acc_heads = np.concatenate([np.copy(self.acc_item["head"].pos), np.copy(head).reshape(1,3)])
                 acc_vecs = np.concatenate([np.copy(self.acc_item["vec"].pos), np.copy(self.current_item["vec"].pos).reshape(2,3)])
                 acc_att = np.concatenate([np.copy(self.acc_item["att"].pos), np.copy(att).reshape(1,3)])
                 acc_size = np.concatenate([np.copy(self.acc_item["att"].size) , np.copy(size_p).reshape(1)])
-                if f in self.keypoints and self.keypoints[f]["hand"] is not None: acc_hand = np.concatenate([np.copy(self.acc_item["hand"].pos) , np.copy(self.keypoints[f]["hand"]).reshape(2,3)])
+                acc_hands = np.concatenate([np.copy(self.acc_item["hand"].pos), np.copy(self.current_item["hand"].pos).reshape(2,3)])
+                #if f in self.keypoints and self.keypoints[f]["hand"] is not None: acc_hand = np.concatenate([np.copy(self.acc_item["hand"].pos) , np.copy(self.keypoints[f]["hand"]).reshape(2,3)])
 
             
             self.acc_item["head"].setData(pos = acc_heads)
             self.acc_item["vec"].setData(pos = acc_vecs)
             self.acc_item["att"].setData(pos = acc_att, size = acc_size)
-            if f in self.keypoints and self.keypoints[f]["hand"] is not None: self.acc_item["hand"].setData(pos = acc_hand)
+            self.acc_item["hand"].setData(pos = acc_hands)
+            #if f in self.keypoints and self.keypoints[f]["hand"] is not None: self.acc_item["hand"].setData(pos = acc_hand)
             self.acc_item["frame"].append(f)
   
             if plot_vec and self.line_type == 2:
@@ -835,6 +842,7 @@ class View3D(gl.GLViewWidget):
         color = []
         count = 0
         heads = []
+        hands = []
         size_list = []
         for f in range(frame_min, frame_max):
             if f not in self.attention: 
@@ -852,12 +860,15 @@ class View3D(gl.GLViewWidget):
             size_list.append(self.attention[f]["size"])
             vecs.append(u[0])
             vecs.append(u[1])
+            hands.append(self.attention[f]["handL"])
+            hands.append(self.attention[f]["handR"])
             count += 1
 
         if total == 0: 
             return
 
         heads = np.array(heads)
+        hands = np.array(hands)
         points = np.array(points)
         vecs = np.array(vecs)
         color = np.array(color)
@@ -872,11 +883,15 @@ class View3D(gl.GLViewWidget):
 
         itemh = gl.GLScatterPlotItem(pos = heads, color=color, size = 15.0)
         item = gl.GLScatterPlotItem(pos = points, color=color, size = size_list)
+        itemhands = gl.GLScatterPlotItem(pos = hands, color=color, size = 12.0)
 
         self.drawn_t_point = item 
-        self.drawn_h_point = itemh       
+        self.drawn_h_point = itemh      
+        self.drawn_hand_point = itemhands    
         if self.add_t_P: self.addItem(item) 
         if self.add_Head: self.addItem(itemh) 
+        if self.add_Hand: self.addItem(itemhands)
+
         if as_type == 0:    # Vector type
             if self.project_floor: vecs[:,2] = 0.0
             color[:, -1] = 0.2
@@ -926,8 +941,10 @@ class View3D(gl.GLViewWidget):
             self.removeItem(self.drawn_t_point)
         if self.drawn_h_point is not None and self.add_Head:
             self.removeItem(self.drawn_h_point)
+        if self.drawn_hand_point is not None and self.add_Hand:
+            self.removeItem(self.drawn_hand_point)
 
-        self.drawn_t_point, self.drawn_t_item, self.drawn_h_point = None, None, None
+        self.drawn_t_point, self.drawn_t_item, self.drawn_h_point, self.drawn_hand_point = None, None, None, None
 
         return
 
@@ -940,7 +957,7 @@ class View3D(gl.GLViewWidget):
     def colorCheck(self, state):
         self.color_code = state
         for f, item in self.current_item.items(): 
-            if type(item) == int: continue
+            if type(item) == int or item is None: continue
             color = self.base_color
             f = self.current_item["frame"]
             if state == 1:
@@ -978,12 +995,12 @@ class View3D(gl.GLViewWidget):
 
     def addHandCheck(self, state):
         if state:
-            #if self.drawn_h_point is not None:
-            #    self.addItem(self.drawn_h_point) 
+            if self.drawn_hand_point is not None:
+                self.addItem(self.drawn_hand_point) 
             pass
         else:
-            #if self.drawn_h_point is not None and self.add_Head:
-            #    self.removeItem(self.drawn_h_point)  
+            if self.drawn_hand_point is not None and self.add_Hand:
+                self.removeItem(self.drawn_hand_point)  
             pass
         self.add_Hand = state 
         self.current_item["hand"].setVisible(state)      

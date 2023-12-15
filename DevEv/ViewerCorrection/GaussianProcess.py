@@ -13,7 +13,7 @@ def read_data(filename):
     with open(filename, "r") as f:
         data = f.readlines()
 
-    x_list = []
+    x_list, y_list = [], []
     count = 0
     for d in data:
         d = d.split(",")
@@ -25,11 +25,12 @@ def read_data(filename):
         else: continue
         x_list.append([float(x), float(y), float(z), float(y), float(p), float(r)])
         count += 1
+        y_list.append(int(fid))
         #if count > 2100: break
     x_list = np.array(x_list)
     x_list =  x_list[1:] - x_list[:-1]
-    y_list = np.linspace(0, 1, len(x_list))
-
+    #y_list = np.linspace(0, 1, len(x_list))
+    y_list = np.array(y_list[1:])
     return x_list, y_list
 
 
@@ -69,10 +70,15 @@ def get_uncertainty(x_tr, max_n=None):
     mean, var, value = GP(x_tr)
     value = var.mean(-1).mean(-1)
     value = (value - min(value)) / (max(value) - min(value))
-    peaks, _ = find_peaks(value, height=max(0.05, value.mean() + 0.5*value.std() ), distance=30, prominence=0.01)
+    #peaks, _ = find_peaks(value, height=max(0.05, value.mean() + 0.5*value.std() ), distance=30, prominence=0.01)
+    peaks, _ = find_peaks(value, distance=30)
     selected = value[peaks]
     if max_n is not None:
-        if len(peaks) < max_n: peaks, _ = find_peaks(value, height=0.05, distance=50, prominence=0.01)
+        if len(peaks) < max_n: 
+            mean, var, value = GP(x_tr, tau = 10)
+            value = var.mean(-1).mean(-1)
+            value = (value - min(value)) / (max(value) - min(value))
+            peaks, _ = find_peaks(value, distance=30)
         ind_selected = value[peaks].argsort()[::-1]
         ind_selected = ind_selected[:max_n]
         selected = selected[ind_selected]
@@ -87,13 +93,13 @@ def uncertainty(filename):
     
     value = var.mean(-1).mean(-1)
     value = (value - min(value)) / (max(value) - min(value))
-    peaks, _ = find_peaks(value, height=max(0.05, value.mean() + 0.5*value.std() ), distance=30, prominence=0.01)
-
+    peaks, _ = find_peaks(value, distance=30)
     m = mean[:,0]
+
     err = np.sqrt(var[:, 0, 0])
-    plt.plot(np.arange(len(m)),  m+err, "--r", label='std', linewidth=1)
-    plt.plot(np.arange(len(m)),  m-err, "--r", linewidth=1)
-    plt.plot(np.arange(len(m)),  m, "-b", label='Mean')
+    plt.plot(y_tr,  m+err, "--r", label='std', linewidth=1)
+    plt.plot(y_tr,  m-err, "--r", linewidth=1)
+    plt.plot(y_tr,  m, "-b", label='Mean')
     plt.title("GP")
     plt.ylabel("x Offset")
     plt.xlabel("Time")
@@ -101,8 +107,8 @@ def uncertainty(filename):
     plt.savefig("GP_x.png")
     plt.close()
 
-    plt.plot(np.arange(len(value)),  value, "-g", label='logpdf')
-    plt.plot(peaks, value[peaks], "xk", label="selection")
+    plt.plot(y_tr,  value, "-g", label='logpdf')
+    plt.plot(y_tr[peaks], value[peaks], "xk", label="selection")
     plt.title("Frame selection")
     plt.ylabel("logpdf")
     plt.xlabel("Time")
@@ -111,7 +117,7 @@ def uncertainty(filename):
     plt.close()
 
 
-    peaks = [str(p) for p in peaks]
+    peaks = [str(y_tr[p]) for p in peaks]
     #with open("data/results.txt","a") as f:
     #    f.write(",".join(peaks))
     return peaks
