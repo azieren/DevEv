@@ -65,9 +65,9 @@ def draw_axis(img, yaw, pitch, roll, tdx=None, tdy=None, size = 50):
 
     # Draw the vector onto the background image
     thickness = 4  # Line thickness
-    cv2.line(img, start_point, end_point_x, (0, 0, 255), thickness)
-    cv2.line(img, start_point, end_point_y, (0, 255, 0), thickness)
-    cv2.line(img, start_point, end_point_z, (255, 0, 0), thickness)
+    #cv2.line(img, start_point, end_point_x, (255, 0, 0), thickness)
+    #cv2.line(img, start_point, end_point_y, (0, 255, 0), thickness)
+    cv2.line(img, start_point, end_point_z, (0, 0, 255), thickness)
     return img
 
 
@@ -86,9 +86,12 @@ def draw_info_view(img, p2d, flag = None):
         if "att_v" in info and flag["att"]:
             img = cv2.circle(img, info["att_v"], radius=4, color= (0,0,255), thickness=10)
         if "handL" in info and flag["handL"]:
-            img = cv2.circle(img, info["handL"], radius=4, color= (51,128,229), thickness=5)
+            c = np.array([[1.0,0.0,1.0,1.0], [0.0,1.0,0.0,1.0]])
+            #  color= (51,128,229)
+            img = cv2.circle(img, info["handL"], radius=4, color= (255,0,255), thickness=5)
         if "handR" in info and flag["handR"]:
-            img = cv2.circle(img, info["handR"], radius=4, color= (0,255,229), thickness=5)
+            # color= (0,255,229)
+            img = cv2.circle(img, info["handR"], radius=4, color= (0,255,0), thickness=5)
     return img
 
 class VideoApp(QWidget):

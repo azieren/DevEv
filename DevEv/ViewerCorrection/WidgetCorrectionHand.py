@@ -137,7 +137,8 @@ class CorrectionWindowHand(QWidget):
         self.project3dButtonLeft = QPushButton("&Project 3D: Left")
         self.project3dButtonLeft.setEnabled(True)
         self.project3dButtonLeft.setIcon(self.style().standardIcon(QStyle.SP_MessageBoxQuestion))
-        color_tuple = (0.9,0.5,0.2)  # RGB tuple (values between 0.0 and 1.0)
+        #color_tuple = (0.9,0.5,0.2)  # RGB tuple (values between 0.0 and 1.0)
+        color_tuple = (1.0,0.0,1.0)
         self.project3dButtonLeft.setStyleSheet(f'QPushButton {{background-color: rgb({int(color_tuple[0]*255)}, \
             {int(color_tuple[1]*255)}, {int(color_tuple[2]*255)}); color:black;}}')
 
@@ -146,7 +147,8 @@ class CorrectionWindowHand(QWidget):
         self.project3dButtonRight = QPushButton("&Project 3D: Right")
         self.project3dButtonRight.setEnabled(True)
         self.project3dButtonRight.setIcon(self.style().standardIcon(QStyle.SP_MessageBoxQuestion))
-        color_tuple = (0.9, 1.0, 0.0)  # RGB tuple (values between 0.0 and 1.0)
+        #color_tuple = (0.9, 1.0, 0.0)  # RGB tuple (values between 0.0 and 1.0)
+        color_tuple = (0.0,1.0,0.0)
         self.project3dButtonRight.setStyleSheet(f'QPushButton {{background-color: rgb({int(color_tuple[0]*255)}, \
             {int(color_tuple[1]*255)}, {int(color_tuple[2]*255)}); color: black;}}')
 

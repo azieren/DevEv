@@ -103,7 +103,7 @@ class View3D(gl.GLViewWidget):
 
         room_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/Room.ply')
         self.mesh = trimesh.load_mesh(room_file)
-        self.read_room()
+        #self.read_room()
         att_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/attention.txt')
         self.attention = self.read_attention(att_file)
         #self.keypoints = self.read_keypoints("DevEv/data_3d_DevEv_S07_04_Sync.npy")
@@ -143,24 +143,26 @@ class View3D(gl.GLViewWidget):
         u =  np.array([[0.0,0.0,0.0], [0.0,0.0,1.0]])
         self.current_item["head"] = gl.GLScatterPlotItem(pos = u[0].reshape(1,3), color=(0.0,0.0,1.0,1.0), size = np.array([30.0]),  glOptions = 'translucent')
         self.current_item["att"] = gl.GLScatterPlotItem(pos = u[1].reshape(1,3), color=self.base_color, size = np.array([1.0]), glOptions = 'additive')
-        self.current_item["vec"] = gl.GLLinePlotItem(pos = u, color = np.array([self.base_color, self.base_color2]), width= 5.0, antialias = True, glOptions = 'additive', mode = 'lines')
+        self.current_item["vec"] = gl.GLLinePlotItem(pos = u, color = np.array([self.base_color, self.base_color2]), width= 8.0, antialias = True, glOptions = 'additive', mode = 'lines')
         self.current_item["cone"] = self.draw_cone(u[0], u[1])
         self.current_item["hand"] = gl.GLScatterPlotItem(glOptions = 'additive')
-        self.current_item["hand"].setData(pos = np.zeros((2,3)), color=np.array([[0.9,0.5,0.2,1.0], [0.9,1.0,0.0,1.0]]), size = np.array([12.0]))
+        #c = np.array([[0.9,0.5,0.2,1.0], [0.9,1.0,0.0,1.0]])
+        c = np.array([[1.0,0.0,1.0,1.0], [0.0,1.0,0.0,1.0]])
+        self.current_item["hand"].setData(pos = np.zeros((2,3)), color=c, size = np.array([12.0]))
 
         for _, obj in self.current_item.items():
             if type(obj) == int or obj is None: continue
             obj.hide()
             self.addItem(obj)
 
-        c = (0.7, 0.7, 0.7, 0.35)
-        self.acc_item["head"] = gl.GLScatterPlotItem(pos = u[0], color=c, size = np.array([30.0]), glOptions = 'additive')
-        self.acc_item["att"] = gl.GLScatterPlotItem(pos = u[1], color=c, size = np.array([1.0]), glOptions = 'additive')
-        self.acc_item["vec"] = gl.GLLinePlotItem(pos = u, color =c, width= 3.0, antialias = True, glOptions = 'additive', mode = 'lines')
-        d, _ = self.draw_Ncone(u[:1], u[1:])
+        self.acc_item["head"] = gl.GLScatterPlotItem(pos = u[0], color=(0.6, 0.6, 1.0, 0.2), size = np.array([15.0]), glOptions = 'additive')
+        self.acc_item["att"] = gl.GLScatterPlotItem(pos = u[1], color=(0.7, 0.7, 0.7, 0.2), size = np.array([1.0]), glOptions = 'translucent')
+        self.acc_item["vec"] = gl.GLLinePlotItem(pos = u, color =(0.7, 0.7, 0.7, 0.2), width= 3.0, antialias = True, glOptions = 'additive', mode = 'lines')
+        #d, _ = self.draw_Ncone(u[:1], u[1:])
         self.acc_item["cone"] = []
         self.acc_item["hand"] = gl.GLScatterPlotItem(glOptions = 'additive')
-        self.acc_item["hand"].setData(pos = np.zeros((2,3)), color=(0.5, 0.5, 0.0, 0.35), size = np.array([12.0]))
+        c = np.array([[1.0,0.5,1.0,0.2], [0.5,1.0,0.5,0.2]])
+        self.acc_item["hand"].setData(pos = np.zeros((2,3)), color=c, size = np.array([10.0]))
 
         #self.current_item["skpoint"].hide()
         #self.current_item["skline"].hide()
@@ -751,11 +753,9 @@ class View3D(gl.GLViewWidget):
                 
         att = self.attention[f]["att"]
         size_p = self.attention[f]["size"].reshape(1)
-        old_u = self.current_item["att"].pos[0] - self.current_item["head"].pos[0]
         self.current_item["att"].setData(pos = att.reshape(1,3), size = size_p)
         self.current_item["att"].setVisible(plot_vec and not self.line_type == 3)
 
-        old_pos = np.copy(self.current_item["head"].pos[0])
         head = self.attention[f]["head"]
         self.current_item["head"].setData(pos = head.reshape(1,3))
         self.current_item["head"].setVisible(self.add_Head)
@@ -777,19 +777,7 @@ class View3D(gl.GLViewWidget):
             self.current_item["vec"].setData(pos = u)
         self.current_item["vec"].setVisible(plot_vec and self.line_type in [0,1])
 
-        
-        """old_u = old_u/ np.linalg.norm(old_u)
-        u = u[1] - u[0]
-        u = u/ np.linalg.norm(u)
-        v = np.cross(old_u, u)
-        vn = np.linalg.norm(v)
-        if vn > 1e-6:
-            v = v / vn
-            a = max(-1.0, min(1.0, np.dot(old_u, u)))
-            a = np.arccos(a)*180.0/np.pi
-            self.current_item["cone"].translate(-old_pos[0], -old_pos[1], -old_pos[2])
-            self.current_item["cone"].rotate(a, v[0], v[1], v[2])
-            self.current_item["cone"].translate(head[0], head[1], head[2])"""
+
         self.current_item["cone"].setMeshData(meshdata=self.draw_cone(u[0], u[1], just_data=True))
         self.current_item["cone"].setVisible(plot_vec and self.line_type == 2)
         self.current_item["frame"] = f
@@ -821,12 +809,15 @@ class View3D(gl.GLViewWidget):
             self.acc_item["head"].setData(pos = acc_heads)
             self.acc_item["vec"].setData(pos = acc_vecs)
             self.acc_item["att"].setData(pos = acc_att, size = acc_size)
-            self.acc_item["hand"].setData(pos = acc_hands)
+            color_hands = np.array([[1.0,0.5,1.0,0.2], [0.5,1.0,0.5,0.2]])
+            self.acc_item["hand"].setData(pos = acc_hands, color = np.tile(color_hands, (acc_hands.shape[0]//2, 1)))
+            
             #if f in self.keypoints and self.keypoints[f]["hand"] is not None: self.acc_item["hand"].setData(pos = acc_hand)
             self.acc_item["frame"].append(f)
   
             if plot_vec and self.line_type == 2:
-                c = (0.0, 0.7, 0.0, 0.5)
+                #c = (0.0, 0.7, 0.0, 0.5)
+                c = (0.7, 0.7, 0.7, 0.2)
                 item = gl.GLMeshItem(meshdata=self.current_item["cone"].opts["meshdata"], glOptions = 'translucent', drawEdges=False, computeNormals=False, color=c)
                 item.setTransform(self.current_item["cone"].transform())
                 self.acc_item["cone"].append(item)
@@ -839,7 +830,7 @@ class View3D(gl.GLViewWidget):
         total = len([0 for f in range(frame_min, frame_max) if f in self.attention])
         points = []
         vecs = []
-        color = []
+        color, color_hands = [], []
         count = 0
         heads = []
         hands = []
@@ -862,6 +853,7 @@ class View3D(gl.GLViewWidget):
             vecs.append(u[1])
             hands.append(self.attention[f]["handL"])
             hands.append(self.attention[f]["handR"])
+            color_hands.extend([[1.0, 0.5, 1.0, 0.2],[0.5,1.0,0.5,0.2]])
             count += 1
 
         if total == 0: 
@@ -873,17 +865,18 @@ class View3D(gl.GLViewWidget):
         vecs = np.array(vecs)
         color = np.array(color)
         size_list = np.array(size_list)
-
+        color_head = (0.6,0.6, 1.0, 0.2)
         if len(points) > 3 and self.color_code == 2:
             kde = stats.gaussian_kde(points.T)
             density = kde(points.T)   
             a, b = min(density), max(density)
             density = (density - a) / (b-a + 1e-6)
             color = cm.jet(density)
+        if self.color_code in [1,2]: color_head = color
 
-        itemh = gl.GLScatterPlotItem(pos = heads, color=color, size = 15.0)
-        item = gl.GLScatterPlotItem(pos = points, color=color, size = size_list)
-        itemhands = gl.GLScatterPlotItem(pos = hands, color=color, size = 12.0)
+        itemh = gl.GLScatterPlotItem(pos = heads, color=color_head, size = 13.0, glOptions = 'additive')
+        item = gl.GLScatterPlotItem(pos = points, color=color, size = size_list, glOptions = 'translucent')
+        itemhands = gl.GLScatterPlotItem(pos = hands, color=np.array(color_hands), size = 10.0, glOptions = 'translucent')
 
         self.drawn_t_point = item 
         self.drawn_h_point = itemh      
@@ -894,14 +887,16 @@ class View3D(gl.GLViewWidget):
 
         if as_type == 0:    # Vector type
             if self.project_floor: vecs[:,2] = 0.0
-            color[:, -1] = 0.2
+            
             if self.line_type == 2: # cone type
+                color[:, -1] = 0.2
                 d, n = self.draw_Ncone(vecs[::2], vecs[1::2])
                 color = np.repeat(color, n, axis=0)
                 d.setVertexColors(color)
                 item = gl.GLMeshItem(meshdata=d, glOptions = 'translucent', drawEdges=True, antialias=True, computeNormals=False)   
             else:    
                 color = np.repeat(color, 2, axis=0)
+                color[:,-1] = 0.5
                 item = gl.GLLinePlotItem(pos = vecs, color = color, width= self.default_length, antialias=True, glOptions='translucent', mode='lines')
             
             if self.line_type != 3: 
