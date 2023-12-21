@@ -79,7 +79,8 @@ class View3D(gl.GLViewWidget):
         self.base_color_t = (0.8,0.8,0.8,1.0)   
         ## create three grids, add each to the view   
         xgrid = gl.GLGridItem()
-        xgrid.setSize(x=50, y=40)
+        xgrid.setSize(x=40, y=40)
+        xgrid.setSpacing(x=1.0, y=1.0)
         self.addItem(xgrid)
         self.current_item = {"head":None , "att":None, "vec":None, "cone":None, "hand":None, "skpoint":None ,"skline":None , "frame":0}
         self.acc_item = {"head":None , "att":None, "vec":None, "cone":None, "hand":None , "frame":[]}
@@ -882,7 +883,10 @@ class View3D(gl.GLViewWidget):
         self.drawn_h_point = itemh      
         self.drawn_hand_point = itemhands    
         if self.add_t_P: self.addItem(item) 
-        if self.add_Head: self.addItem(itemh) 
+        if self.add_Head: 
+            self.addItem(itemh) 
+            head_L = np.linalg.norm(heads[1:] - heads[:-1], axis = -1)
+            print("Head Trajectory Length: {:.3f} m".format(head_L.sum()))
         if self.add_Hand: self.addItem(itemhands)
 
         if as_type == 0:    # Vector type
@@ -907,8 +911,16 @@ class View3D(gl.GLViewWidget):
             if total < 3: return 
             color[:, -1] = 0.3
             color = np.repeat(color, 2, axis=0)
+            
             hull = ConvexHull(vecs)
-            if self.project_floor: vecs[:,2] = 0.0
+            info_str = "Hull Volume: " + str(hull.volume) + " m3"
+            if self.project_floor:
+                vecs[:,2] = 0.0 
+                hull2d = ConvexHull(vecs[:,:2])
+                info_str = "Hull Surface Area: " + str(hull2d.area/2.0) + " m2"
+            print(info_str)
+            np.save("mesh_hull.npy", {"vertexes":vecs, "faces":hull.simplices})
+                
             if hull.good is not None:
                 d = gl.MeshData(vertexes=vecs[hull.good], faces=hull.simplices[hull.good])
                 color = color[hull.good]
@@ -920,12 +932,6 @@ class View3D(gl.GLViewWidget):
             if self.line_type != 3: 
                 self.drawn_t_item = mesh
                 self.addItem(mesh) 
-
-
-            np.save("mesh_hull.npy", {"vertexes":vecs, "faces":hull.simplices})
-            print("Hull Surface Area: ", hull.area)
-            print("Hull Volume: ", hull.volume)
-
                 
         return
 
