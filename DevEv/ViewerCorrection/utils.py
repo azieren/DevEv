@@ -228,7 +228,7 @@ def write_results(tool, source, fileName = None, is_temp = False):
     with open(fileName, "w") as w:
         w.write("")
         for i, (f, p) in enumerate(tool.viewer3D.attention.items()):
-            pos, v = p["u"][0], p["u"][1]-p["u"][0]
+            pos, v = p["head"], p["u"][1]-p["u"][0]
             handL, handR= p["handL"], p["handR"]
             if p["att"] is not None:
                 att = p["att"]

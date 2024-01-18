@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QStyle, QPushButton, QLabel, QVBoxLayout, QWidget, QHBoxLayout, QFileDialog, QMessageBox, QListWidget, \
+from PyQt5.QtWidgets import QStyle, QPushButton, QLabel, QVBoxLayout, QWidget, QHBoxLayout, QDialog, QMessageBox, QListWidget, \
                                 QAbstractItemView, QInputDialog, QListWidgetItem, QCheckBox, QComboBox
 from PyQt5.QtCore import pyqtSignal, QDir, Qt
 #from PyQt5.QtGui import QMessageBox
@@ -10,6 +10,7 @@ from scipy import interpolate
 
 from .GaussianProcess import get_uncertainty
 from .utils import project_2d, build_mask, to_3D, write_results
+from .ThreeIntWidget import ThreeEntryDialog
 
 class ListWidgetItem(QListWidgetItem):
     def __lt__(self, other):
@@ -64,6 +65,11 @@ class CorrectionWindowHand(QWidget):
         else: self.framelabel = QLabel("Frame: " + str(self.frame_list[self.curr_indice]))
         #self.nextframelabel = QLabel("Next Frame: " + str(self.frame_list[(self.curr_indice + 1) % len(self.frame_list)]))
 
+        self.addRangeButton = QPushButton("[++]")
+        self.addRangeButton.setEnabled(True)
+        self.addRangeButton.setStatusTip('Add multiple frames for correction at a fixed rate within a range')
+        self.addRangeButton.clicked.connect(self.add_frame_range)
+        
         self.addManyButton = QPushButton("++")
         self.addManyButton.setEnabled(True)
         self.addManyButton.setStatusTip('Add multiple frames for correction at a fixed rate')
@@ -244,6 +250,7 @@ class CorrectionWindowHand(QWidget):
 
         layoutFrameList = QVBoxLayout()
         layoutFrameList.addWidget(self.framelabel)
+        layoutFrameList.addWidget(self.addRangeButton)
         layoutFrameList.addWidget(self.addManyButton)
         layoutFrameList.addWidget(self.addButton)
         layoutFrameList.addWidget(self.removeButton)
@@ -339,6 +346,23 @@ class CorrectionWindowHand(QWidget):
         self.update_frame()
         return
 
+    def add_frame_range(self):
+        dialog = ThreeEntryDialog(self)
+        ok = dialog.exec_() 
+        
+        if ok == QDialog.Accepted: 
+            start, end, step = dialog.getInputs()
+            L = list(self.viewer3D.attention.keys())
+            for x in np.arange(start, end, step, dtype=int):
+                if x in self.frame_list or x not in L: continue
+                
+                self.frame_list = np.append(self.frame_list, x)
+                self.frame_listW.addItem(ListWidgetItem("{} - NA".format(x)))
+            self.frame_list = np.sort(self.frame_list)
+            self.frame_listW.setCurrentRow(0)
+            self.curr_indice = 0
+            self.update_frame()
+            
     def add_frame_many(self):
         value, ok = QInputDialog.getInt(self, 'Add frame at fixed rate', 'Enter a frame rate \n(single entry)')
         L = list(self.viewer3D.attention.keys())

@@ -778,8 +778,8 @@ class View3D(gl.GLViewWidget):
             self.current_item["vec"].setData(pos = u)
         self.current_item["vec"].setVisible(plot_vec and self.line_type in [0,1])
 
-
-        self.current_item["cone"].setMeshData(meshdata=self.draw_cone(u[0], u[1], just_data=True))
+        cone_data = self.draw_cone(u[0], u[1], just_data=True)
+        self.current_item["cone"].setMeshData(meshdata=cone_data)
         self.current_item["cone"].setVisible(plot_vec and self.line_type == 2)
         self.current_item["frame"] = f
 
@@ -819,8 +819,8 @@ class View3D(gl.GLViewWidget):
             if plot_vec and self.line_type == 2:
                 #c = (0.0, 0.7, 0.0, 0.5)
                 c = (0.7, 0.7, 0.7, 0.2)
-                item = gl.GLMeshItem(meshdata=self.current_item["cone"].opts["meshdata"], glOptions = 'translucent', drawEdges=False, computeNormals=False, color=c)
-                item.setTransform(self.current_item["cone"].transform())
+                item = gl.GLMeshItem(meshdata=cone_data, glOptions = 'translucent', drawEdges=False, computeNormals=False, color=c)
+                #item.setTransform(self.current_item["cone"].transform())
                 self.acc_item["cone"].append(item)
                 self.addItem(item)
         return
@@ -854,7 +854,7 @@ class View3D(gl.GLViewWidget):
             vecs.append(u[1])
             hands.append(self.attention[f]["handL"])
             hands.append(self.attention[f]["handR"])
-            color_hands.extend([[1.0, 0.5, 1.0, 0.2],[0.5,1.0,0.5,0.2]])
+            color_hands.extend([[1.0, 0.5, 1.0, 0.5],[0.5,1.0,0.5,0.5]])
             count += 1
 
         if total == 0: 
@@ -866,7 +866,7 @@ class View3D(gl.GLViewWidget):
         vecs = np.array(vecs)
         color = np.array(color)
         size_list = np.array(size_list)
-        color_head = (0.6,0.6, 1.0, 0.2)
+        color_head = (0.6,0.6, 1.0, 0.5)
         if len(points) > 3 and self.color_code == 2:
             kde = stats.gaussian_kde(points.T)
             density = kde(points.T)   
@@ -1067,9 +1067,8 @@ class View3D(gl.GLViewWidget):
         data["line"][0] = data["head"]
         data["line"][1] = att
         data["att"] = att
-        u = att - data["head"]
-        size = np.linalg.norm(u)
-        u = u / size
+        size = np.linalg.norm(att - data["head"])
+
         data["size"] = np.clip(size*4.0, 10.0, 80.0)
         data["u"][0] = np.copy(data["head"])
         data["u"][1] = np.copy(data["head"] + self.default_length*u)
@@ -1090,9 +1089,7 @@ class View3D(gl.GLViewWidget):
         return handL_changed, handR_changed
 
     def translate_head(self, dx, dy, dz, emit=False):
-        old_head = self.current_item["head"].pos[0]
         new_pos = self.current_item["head"].pos[0] + np.array([dx, dy, dz])
-        old_u = self.current_item["att"].pos[0] - old_head
         self.current_item["head"].setData(pos=new_pos.reshape(1,3))
 
         u = np.copy(self.current_item["att"].pos[0] - new_pos)
@@ -1103,22 +1100,13 @@ class View3D(gl.GLViewWidget):
         else:
             self.current_item["vec"].setData(pos=[new_pos, self.current_item["att"].pos[0]])
 
-
         # Semi Sphere
         self.semi_sphere["item"].translate(dx, dy, dz)
         self.semi_sphere["center"] = new_pos
 
-        old_u = old_u/ np.linalg.norm(old_u)
-        v = np.cross(old_u, u)
-        vn = np.linalg.norm(v)
-        if vn > 1e-5:
-            v = v / vn
-            a = max(-1.0, min(1.0, np.dot(old_u, u)))
-            a = np.arccos(a)*180.0/np.pi
-            self.current_item["cone"].translate(-old_head[0], -old_head[1], -old_head[2])
-            self.current_item["cone"].rotate(a, v[0], v[1], v[2], local=False)
-            self.current_item["cone"].translate(new_pos[0], new_pos[1], new_pos[2])
-
+        cone_data = self.draw_cone(new_pos, new_pos+u, just_data=True)
+        self.current_item["cone"].setMeshData(meshdata=cone_data)
+        
         if emit:
             self.position_sig.emit(new_pos)
             self.direction_sig.emit(u)
@@ -1127,7 +1115,6 @@ class View3D(gl.GLViewWidget):
         return u
 
     def translate_attention_p(self, dx, dy, dz):
-        old_att = np.copy(self.current_item["att"].pos[0])
         head = self.current_item["head"].pos[0]
         new_pos = np.copy(self.current_item["att"].pos[0] + np.array([dx, dy, dz]))
         self.current_item["att"].setData(pos=new_pos.reshape(1,3))
@@ -1135,30 +1122,19 @@ class View3D(gl.GLViewWidget):
         u = new_pos - head
         u = u / np.linalg.norm(u)
 
-        
         if self.line_type == 0:
             self.current_item["vec"].setData(pos=[head, head + self.default_length*u])
         else:
             self.current_item["vec"].setData(pos=[head, self.current_item["att"].pos[0]])
 
-        old_u = old_att - head
-        old_u = old_u/ np.linalg.norm(old_u)
-        v = np.cross(old_u, u)
-        vn = np.linalg.norm(v)
-        if vn > 1e-5:
-            v = v / vn
-            a = max(-1.0, min(1.0, np.dot(old_u, u)))
-            a = np.arccos(a)*180.0/np.pi
-            self.current_item["cone"].translate(-head[0], -head[1], -head[2])
-            self.current_item["cone"].rotate(a, v[0], v[1], v[2], local=False)
-            self.current_item["cone"].translate(head[0], head[1], head[2])
+        cone_data = self.draw_cone(head, head+u, just_data=True)
+        self.current_item["cone"].setMeshData(meshdata=cone_data)
         return u 
 
     def rotate_attention(self, angle, axis, modify_att):
 
         head = self.current_item["head"].pos[0]
         u =  self.current_item["att"].pos[0] - head
-        old_u = np.copy(u)
         u = rotate(u, angle*np.pi/180.0, axis)
         if modify_att:
             self.current_item["att"].setData(pos= np.copy(head + u).reshape(1,3))
@@ -1169,24 +1145,15 @@ class View3D(gl.GLViewWidget):
         elif self.line_type == 1:
             self.current_item["vec"].setData(pos= [head, head + self.current_item["att"].pos[0]])
 
-        old_u = old_u/ np.linalg.norm(old_u)
-        u = u/np.linalg.norm(u)
-        v = np.cross(old_u, u)
-        vn = np.linalg.norm(v)
-        if vn > 1e-5:
-            v = v / vn
-            a = max(-1.0, min(1.0, np.dot(old_u, u)))
-            a = np.arccos(a)*180.0/np.pi
-            self.current_item["cone"].translate(-head[0], -head[1], -head[2])
-            self.current_item["cone"].rotate(a, v[0], v[1], v[2], local=False)
-            self.current_item["cone"].translate(head[0], head[1], head[2])
+
+        cone_data = self.draw_cone(head, head+u, just_data=True)
+        self.current_item["cone"].setMeshData(meshdata=cone_data)
 
         return self.current_item["att"].pos[0]
 
     def rotate_attention_signal(self, M, modify_att):
         head = self.current_item["head"].pos[0]
         u =  self.current_item["att"].pos[0] -head
-        old_u = np.copy(u)
         u = M.rotatedVector(QVector3D(u[0], u[1], u[2]))
         u = np.array([u[0], u[1], u[2]])
         
@@ -1199,19 +1166,8 @@ class View3D(gl.GLViewWidget):
         elif self.line_type == 1:
             self.current_item["vec"].setData(pos=[head, self.current_item["att"].pos[0]])
         
-
-        old_u = old_u/ np.linalg.norm(old_u)
-        u = u/np.linalg.norm(u)
-        v = np.cross(old_u, u)
-        vn = np.linalg.norm(v)
-        
-        if vn > 1e-5:
-            v = v / vn      
-            a = max(-1.0, min(1.0, np.dot(old_u, u)))  
-            a = np.arccos(a)*180.0/np.pi
-            self.current_item["cone"].translate(-head[0], -head[1], -head[2])
-            self.current_item["cone"].rotate(a, v[0], v[1], v[2], local=False)
-            self.current_item["cone"].translate(head[0], head[1], head[2])
+        cone_data = self.draw_cone(head, head+u, just_data=True)
+        self.current_item["cone"].setMeshData(meshdata=cone_data)
 
 
         self.attention_sig.emit(self.current_item["att"].pos[0])
