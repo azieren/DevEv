@@ -704,7 +704,7 @@ class CorrectionWindow(QWidget):
             print("No frame corrected")
             return 
 
-        corrected_list = sorted(self.corrected_list)
+        corrected_list = set(sorted(self.corrected_list))
         f = corrected_list[0]
         corrected_merged = [[f]]
         self.viewer3D.attention[f]["corrected_flag"] = 1

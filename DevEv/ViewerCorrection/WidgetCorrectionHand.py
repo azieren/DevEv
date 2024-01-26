@@ -561,7 +561,7 @@ class CorrectionWindowHand(QWidget):
             print("No frame corrected")
             return 
 
-        self.corrected_list = sorted(self.corrected_list)
+        self.corrected_list = set(sorted(self.corrected_list))
         f = self.corrected_list.pop()
         corrected_merged = [[f]]
         self.viewer3D.attention[f]["corrected_flag_hand"] = 1

@@ -156,13 +156,14 @@ class View3D(gl.GLViewWidget):
             obj.hide()
             self.addItem(obj)
 
-        self.acc_item["head"] = gl.GLScatterPlotItem(pos = u[0], color=(0.6, 0.6, 1.0, 0.2), size = np.array([15.0]), glOptions = 'additive')
+        self.acc_item["head"] = gl.GLScatterPlotItem(pos = u[0], color=(0.6, 0.6, 1.0, 0.4), size = np.array([15.0]), glOptions = 'additive')
         self.acc_item["att"] = gl.GLScatterPlotItem(pos = u[1], color=(0.7, 0.7, 0.7, 0.2), size = np.array([1.0]), glOptions = 'translucent')
         self.acc_item["vec"] = gl.GLLinePlotItem(pos = u, color =(0.7, 0.7, 0.7, 0.2), width= 3.0, antialias = True, glOptions = 'additive', mode = 'lines')
         #d, _ = self.draw_Ncone(u[:1], u[1:])
         self.acc_item["cone"] = []
-        self.acc_item["hand"] = gl.GLScatterPlotItem(glOptions = 'additive')
-        c = np.array([[1.0,0.5,1.0,0.2], [0.5,1.0,0.5,0.2]])
+        self.acc_item["hand"] = gl.GLScatterPlotItem(glOptions = 'translucent')
+        #c = np.array([[1.0,0.5,1.0,1.0], [0.5,1.0,0.5,1.0]])
+        c = np.array([[1.0,0.5,1.0,1.0], [0.0, 0.5, 0.0,1.0]])
         self.acc_item["hand"].setData(pos = np.zeros((2,3)), color=c, size = np.array([10.0]))
 
         #self.current_item["skpoint"].hide()
@@ -810,7 +811,8 @@ class View3D(gl.GLViewWidget):
             self.acc_item["head"].setData(pos = acc_heads)
             self.acc_item["vec"].setData(pos = acc_vecs)
             self.acc_item["att"].setData(pos = acc_att, size = acc_size)
-            color_hands = np.array([[1.0,0.5,1.0,0.2], [0.5,1.0,0.5,0.2]])
+            #color_hands = np.array([[1.0,0.5,1.0,0.2], [0.5,1.0,0.5,0.2]])
+            color_hands = np.array([[1.0,0.0,1.0,1.0], [0.0, 0.5, 0.0,1.0]])
             self.acc_item["hand"].setData(pos = acc_hands, color = np.tile(color_hands, (acc_hands.shape[0]//2, 1)))
             
             #if f in self.keypoints and self.keypoints[f]["hand"] is not None: self.acc_item["hand"].setData(pos = acc_hand)
@@ -854,7 +856,8 @@ class View3D(gl.GLViewWidget):
             vecs.append(u[1])
             hands.append(self.attention[f]["handL"])
             hands.append(self.attention[f]["handR"])
-            color_hands.extend([[1.0, 0.5, 1.0, 0.5],[0.5,1.0,0.5,0.5]])
+            #color_hands.extend([[1.0, 0.5, 1.0, 0.5],[0.5,1.0,0.5,0.5]])
+            color_hands.extend([[1.0,0.0,1.0,1.0], [0.0, 0.5, 0.0,1.0]])
             count += 1
 
         if total == 0: 
@@ -866,7 +869,7 @@ class View3D(gl.GLViewWidget):
         vecs = np.array(vecs)
         color = np.array(color)
         size_list = np.array(size_list)
-        color_head = (0.6,0.6, 1.0, 0.5)
+        color_head = (0.6,0.6, 1.0, 0.7)
         if len(points) > 3 and self.color_code == 2:
             kde = stats.gaussian_kde(points.T)
             density = kde(points.T)   
