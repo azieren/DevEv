@@ -5,6 +5,22 @@ from scipy.spatial.transform import Rotation
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtCore import QDir
 
+def get_quadrant(gt, num_quadrants):
+    # Assuming gt is a 3D normalized vector
+    gt = gt/np.linalg.norm(gt)
+    x, y, z = gt
+    if np.sqrt(x**2+y**2) == 0: theta = 0.0
+    else: theta = np.arccos(x/np.sqrt(x**2+y**2)) + np.pi*int(y<0)
+    if np.sqrt(y**2+z**2) == 0: phi = 0.0
+    else: phi = np.arccos(z)
+
+    # Map the angle to the corresponding quadrant
+    theta_quadrant = int(np.floor(num_quadrants * theta / (2 * np.pi) )) #% num_quadrants
+    phi_quadrant = int(np.floor(num_quadrants * phi /np.pi)) #% num_quadrants
+
+    # Combine the two angles to determine the final quadrant
+    return theta_quadrant * num_quadrants + phi_quadrant
+
 def gaussian(x, mu, sig):
     return np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
 

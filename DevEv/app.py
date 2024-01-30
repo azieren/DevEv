@@ -155,6 +155,10 @@ class VideoWindow(QMainWindow):
         self.HandsCheck.setEnabled(True)
         self.HandsCheck.clicked.connect(self.main3Dviewer.addHandCheck)
         
+        self.speedCheckBox = QCheckBox("Speed x2", self)
+        self.speedCheckBox.clicked.connect(self.speedUp)
+
+
         # Create new action
         openAction = QAction(QIcon('open.png'), '&Open Video', self)        
         openAction.setShortcut('Ctrl+O')
@@ -285,26 +289,31 @@ class VideoWindow(QMainWindow):
         view3DMenu = menuBar.addMenu('&Set 3D View')
         for i in range(8):
             view3DMenu.addAction(self.view3DAction[i])
-         
-            
-            
+           
         vizLayout = QVBoxLayout()
         vizLayout.addWidget(self.showVecButton)
         vizLayout.addWidget(self.showHullButton)
         vizLayout.addWidget(self.addPCheck)
         vizLayout.addWidget(self.addFloorCheck)
 
-
         sceneBLayout = QVBoxLayout()
+        sceneBLayout.addWidget(self.speedCheckBox)
         sceneBLayout.addWidget(self.resetButton)
         sceneBLayout.addWidget(self.clearRoomButton)
 
+        controlVidLayout = QHBoxLayout()
+        controlVidLayout.addWidget(self.playBackButton)
+        controlVidLayout.addWidget(self.playButton)
+        controlVidLayout.addWidget(self.playFrontButton)
+        
+        controlVid2Layout = QVBoxLayout()
+        controlVid2Layout.addWidget(self.speedCheckBox)
+        controlVid2Layout.addLayout(controlVidLayout)
+        
         # Create layouts to place inside widget
         controlLayout = QHBoxLayout()
         controlLayout.setContentsMargins(0, 0, 0, 0)
-        controlLayout.addWidget(self.playBackButton)
-        controlLayout.addWidget(self.playButton)
-        controlLayout.addWidget(self.playFrontButton)
+        controlLayout.addLayout(controlVid2Layout)
         controlLayout.addWidget(self.positionSlider)
         controlLayout.addLayout(sceneBLayout)
         controlLayout.addWidget(self.showAllButton)
@@ -610,6 +619,10 @@ class VideoWindow(QMainWindow):
     def floorCheck(self, state):       
         self.main3Dviewer.project_floor = state     
         self.showAll(True)     
+        return
+    
+    def speedUp(self, state):
+        self.mediaPlayer.setSpeedUp(state)
         return
        
 

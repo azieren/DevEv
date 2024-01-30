@@ -74,7 +74,17 @@ class CorrectionWindowHand(QWidget):
         self.addManyButton.setEnabled(True)
         self.addManyButton.setStatusTip('Add multiple frames for correction at a fixed rate')
         self.addManyButton.clicked.connect(self.add_frame_many)
-        
+
+        self.addNeighborButton = QPushButton("[+]")
+        self.addNeighborButton.setEnabled(True)
+        self.addNeighborButton.setStatusTip('Add neighbor frames for correction')
+        self.addNeighborButton.clicked.connect(self.add_neigh_frame)
+
+        self.addCurrentButton = QPushButton("+Current")
+        self.addCurrentButton.setEnabled(True)
+        self.addCurrentButton.setStatusTip('Add currrent frame for correction')
+        self.addCurrentButton.clicked.connect(self.add_current_frame)
+               
         self.addButton = QPushButton("+")
         self.addButton.setEnabled(True)
         self.addButton.setStatusTip('add a frame for correction')
@@ -252,6 +262,8 @@ class CorrectionWindowHand(QWidget):
         layoutFrameList.addWidget(self.framelabel)
         layoutFrameList.addWidget(self.addRangeButton)
         layoutFrameList.addWidget(self.addManyButton)
+        layoutFrameList.addWidget(self.addNeighborButton)
+        layoutFrameList.addWidget(self.addCurrentButton)
         layoutFrameList.addWidget(self.addButton)
         layoutFrameList.addWidget(self.removeButton)
         layoutFrameList.addWidget(self.copyButton)
@@ -363,8 +375,45 @@ class CorrectionWindowHand(QWidget):
             self.curr_indice = 0
             self.update_frame()
             
+    def add_current_frame(self):
+        frame = self.viewer3D.current_item["frame"]     
+        self._include_frame(frame)
+        return
+
+    def add_neigh_frame(self):
+        value, ok = QInputDialog.getInt(self, 'Add past and future of selected frame', 'Enter an offset \n(single entry)')
+        if not ok: return
+        frame = self.viewer3D.current_item["frame"]       
+        self._include_frame(frame - int(value))
+        self._include_frame(frame + int(value))
+        return        
+    
+    def _include_frame(self, frame):
+        if frame in self.frame_list:
+            print("Frame already selected")
+            return
+        if frame not in self.viewer3D.attention:
+            print("Frame does not have attention")
+            return  
+        self.frame_list = np.append(self.frame_list, frame)
+        self.frame_list = np.sort(self.frame_list)
+        print(self.frame_list)
+        
+        self.frame_listW.addItem(ListWidgetItem("{} - NA".format(frame)))
+        self.curr_indice = self.frame_listW.currentRow()
+        if len(self.frame_list) == 1: 
+            self.frame_listW.setCurrentRow(0)
+            self.curr_indice = 0
+            self.update_frame()
+        return
+                       
+    def add_frame(self):
+        value, ok = QInputDialog.getInt(self, 'Add frame', 'Enter a frame number to add \n(single entry)')
+        if ok:
+            self._include_frame(int(value))
+            
     def add_frame_many(self):
-        value, ok = QInputDialog.getInt(self, 'Add frame at fixed rate', 'Enter a frame rate \n(single entry)')
+        value, ok = QInputDialog.getInt(self, 'Add frames at fixed rate', 'Enter a frame rate \n(single entry)')
         L = list(self.viewer3D.attention.keys())
         if value <= 5:
             print("Frame rate too small")
@@ -378,36 +427,14 @@ class CorrectionWindowHand(QWidget):
             else:
                 start, end = self.viewer3D.segment[self.segmentIndex-1]       
             value = int(value)
-            self.frame_list = []
-            self.frame_listW.clear()
             for x in np.arange(start, end, value, dtype=int):
-                if not x in L: continue
-                self.frame_list.append(x)
+                if not x in L or x in self.frame_list: continue
+                self.frame_list = np.append(self.frame_list, x)
                 self.frame_listW.addItem(ListWidgetItem("{} - NA".format(x)))
+            self.frame_list = np.sort(self.frame_list)
             self.frame_listW.setCurrentRow(0)
             self.curr_indice = 0
             self.update_frame()
-            
-    def add_frame(self):
-        value, ok = QInputDialog.getInt(self, 'Add frame', 'Enter a frame number to add \n(single entry)')
-        if value in self.frame_list:
-            print("Frame already selected")
-            return
-        if value not in self.viewer3D.attention:
-            print("Frame does not have attention")
-            return          
-        if ok:
-            value = int(value)
-            self.frame_list = np.append(self.frame_list, value)
-            self.frame_list = np.sort(self.frame_list)
-            print(self.frame_list)
-            
-            self.frame_listW.addItem(ListWidgetItem("{} - NA".format(value)))
-            self.curr_indice = self.frame_listW.currentRow()
-            if len(self.frame_list) == 1: 
-                self.frame_listW.setCurrentRow(0)
-                self.curr_indice = 0
-                self.update_frame()
 
     def remove_frame(self):
         if len(self.frame_list) == 0: 
@@ -525,6 +552,7 @@ class CorrectionWindowHand(QWidget):
         if curr_frame not in self.corrected_list:
             self.corrected_list.add(curr_frame)
         self.frame_listW.item(self.curr_indice).setBackground(Qt.green)
+        self.project2D()
         return
 
     def project3D(self, data):
@@ -561,11 +589,12 @@ class CorrectionWindowHand(QWidget):
             print("No frame corrected")
             return 
 
-        self.corrected_list = set(sorted(self.corrected_list))
-        f = self.corrected_list.pop()
+        corrected_list = sorted(self.corrected_list)
+        f = corrected_list[0]
         corrected_merged = [[f]]
+
         self.viewer3D.attention[f]["corrected_flag_hand"] = 1
-        for f in self.corrected_list:
+        for f in corrected_list[1:]:
             self.viewer3D.attention[f]["corrected_flag_hand"] = 1
             prev = corrected_merged[-1][-1]
             if abs(f-prev) < threshold:

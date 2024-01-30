@@ -333,6 +333,10 @@ class VideoApp(QWidget):
             i+=1
         print("Finished computing 2D info")
         return
+    
+    def setSpeedUp(self, state):
+        self.thread.setSpeedUp(state)
+        return
         
 def get_cam(x, y, width_video, height_video, view):
     if view[0] == 0:
