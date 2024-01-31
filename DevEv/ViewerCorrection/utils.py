@@ -60,6 +60,7 @@ def build_mask(frames, N, sigma = 1, threshold = 30):
     start, end = max(0, frames[-1]-threshold), min(N, frames[-1]+threshold)
     start_g, end_g = threshold - (frames[-1] - start),  threshold + (end - frames[-1])
     mask[start:end] = np.maximum(mask[start:end], linear[start_g:end_g])
+    mask[frames] = 1
     return mask
 
 def rotation_matrix_from_vectors(a, b):

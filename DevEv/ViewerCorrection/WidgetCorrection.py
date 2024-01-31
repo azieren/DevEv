@@ -776,7 +776,9 @@ class CorrectionWindow(QWidget):
                     info = np.concatenate([h, v], axis=0)
                 interp_poses.append(info) 
             interp_poses = np.array(interp_poses)   
-            interp_func = interpolate.interp1d(interp_list, interp_poses, axis=0, kind = 'quadratic')
+            if len(interp_list) == 2:
+                interp_func = interpolate.interp1d(interp_list, interp_poses, axis=0, kind = 'linear')
+            else: interp_func = interpolate.interp1d(interp_list, interp_poses, axis=0, kind = 'quadratic')
             x_interp = interp_func(np.arange(start, end, 1))
             old_p = None
             for i, f in enumerate(range(start, end)):
