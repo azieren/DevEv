@@ -552,7 +552,7 @@ class CorrectionWindowHand(QWidget):
         if curr_frame not in self.corrected_list:
             self.corrected_list.add(curr_frame)
         self.frame_listW.item(self.curr_indice).setBackground(Qt.green)
-        self.project2D()
+        self.project2D(update_2d = True)
         return
 
     def project3D(self, data):
@@ -575,14 +575,15 @@ class CorrectionWindowHand(QWidget):
         self.pose2d.emit(poses)
         return
 
-    def project2D(self):    
+    def project2D(self, update_2d = False):    
         if self.curr_indice == -1: return
         item = self.viewer3D.current_item
 
         p = {"handL":item["hand"].pos[0], "handR":item["hand"].pos[1]}
         poses = project_2d(p, self.cams, self.h, self.w, is_mat = self.cam_id == 1)
+        poses["update"] = update_2d
         self.pose2d.emit(poses)
-        return
+        return 
 
     def propagate(self, threshold = 30):
         if len(self.corrected_list) == 0: 

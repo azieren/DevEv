@@ -216,7 +216,7 @@ class VideoApp(QWidget):
 
     def setPosition(self, position):
         self.thread.position_flag = position
-        second = position//self.thread.fps
+        second = int(position/self.thread.fps)
         self.textLabel.setText("Time: {} mn {} \t-\t Frame: {}".format(second//60, second % 60, position))
         self.last_position = int(position)
         return
@@ -265,6 +265,10 @@ class VideoApp(QWidget):
     @pyqtSlot(dict)
     def update_image_proj(self, poses):
         self.stop_video()
+        if "update" in poses:
+            print(poses["update"])
+            if poses["update"]: self.update_2d_info(poses)
+            del poses["update"]     
         self.p2d = poses
         self.thread.get_image(self.last_position, emit_frame=False)
 
@@ -275,7 +279,7 @@ class VideoApp(QWidget):
 
     @pyqtSlot(int)
     def update_text(self, frame):
-        second = frame//self.thread.fps
+        second = int(frame/self.thread.fps)
         self.textLabel.setText("Frame: {} \t Time: {} min {} s".format(frame, second//60, second % 60))
         self.frame_id.emit(frame)
 
@@ -332,6 +336,14 @@ class VideoApp(QWidget):
                 print("{}/{} for 2D computation".format(i, len(attention)))
             i+=1
         print("Finished computing 2D info")
+        return
+    
+    def update_2d_info(self, info):
+        if self.last_position in self.info2D:
+            print("In update 2d info", self.last_position)
+            for data_type, data in info.items():
+                if not data_type in self.info2D[self.last_position]: continue
+                self.info2D[self.last_position][data_type] = data
         return
     
     def setSpeedUp(self, state):

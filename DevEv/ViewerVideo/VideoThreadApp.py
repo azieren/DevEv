@@ -27,7 +27,7 @@ class VideoThread(QThread):
         self.duration = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
         width_video = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height_video = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        self.fps = int(self.cap.get(cv2.CAP_PROP_FPS))
+        self.fps = self.cap.get(cv2.CAP_PROP_FPS)
         self.speedup = False
         return self.duration, height_video, width_video
 
@@ -44,7 +44,7 @@ class VideoThread(QThread):
                 if ret:   
                     self.last_image = cv_img            
                     self.change_pixmap_signal.emit(cv_img)                   
-                    time.sleep(1/(self.fps+100))
+                    time.sleep(1/(self.fps*2))
                     self.curr_frame += 1
                 else:
                     self.cap = cv2.VideoCapture(self.filename)
