@@ -523,6 +523,7 @@ class VideoWindow(QMainWindow):
         self.correctionWidgetToys.show()
         self.correctionWidgetToys.raise_()
         self.correctionWidgetToys.update_frame()
+        self.correctionWidgetToys.update_combo_toy()
         self.mediaPlayer.set_annotation(True)
         self.main3Dviewer.set_annotation(True)
                         

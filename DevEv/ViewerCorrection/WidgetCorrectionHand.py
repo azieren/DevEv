@@ -714,7 +714,7 @@ class CorrectionWindowHand(QWidget):
             
         retval = msg.exec_()
         if retval == QMessageBox.Yes:
-            self.runGP()      
+            self.runGP(0)      
         return
 
     def update_list_frames(self):

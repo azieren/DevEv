@@ -73,7 +73,6 @@ def draw_axis(img, yaw, pitch, roll, tdx=None, tdy=None, size = 50):
 
 def draw_info_view(img, p2d, flag = None):
     if flag is None: flag = {"att":True, "head":True, "handL":True, "handR":True}
-    print(p2d)
     for c, info in p2d.items():
         if type(c) != int: continue    
         if "toy" in info:             

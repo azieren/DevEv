@@ -9,7 +9,7 @@ import numpy as np
 from scipy import interpolate
 
 from .GaussianProcess import get_uncertainty
-from .utils import project_2d_simple, build_mask, to_3D, write_results
+from .utils import project_2d_simple, build_mask, to_3D, write_results_toy
 from .ThreeIntWidget import ThreeEntryDialog
 
 class ListWidgetItem(QListWidgetItem):
@@ -43,9 +43,8 @@ class CorrectionWindowToys(QWidget):
         self.viewer3D = viewer3D
         self.frame_list = np.array([], dtype=int)
         self.curr_indice = -1
-        self.corrected_list = set()
+        self.corrected_list = []
         self.history_corrected = self.viewer3D.corrected_frames_hand
-        self.modify_att = True
         self.memory_buffer = None
         self.segmentIndex = 0
         ## Init cameras
@@ -152,7 +151,7 @@ class CorrectionWindowToys(QWidget):
         self.project3dButton.setEnabled(True)
         self.project3dButton.setIcon(self.style().standardIcon(QStyle.SP_MessageBoxQuestion))
         #color_tuple = (0.9,0.5,0.2)  # RGB tuple (values between 0.0 and 1.0)
-        color_tuple = (0.0,1.0,1.0)
+        color_tuple = (1.0,1.0,0.0)
         self.project3dButton.setStyleSheet(f'QPushButton {{background-color: rgb({int(color_tuple[0]*255)}, \
             {int(color_tuple[1]*255)}, {int(color_tuple[2]*255)}); color:black;}}')
 
@@ -212,7 +211,8 @@ class CorrectionWindowToys(QWidget):
         self.ToyBox = QComboBox()
         self.toy_list = []
         self.current_toy = 0
-        for name, obj in self.viewer3D.toy_objects.items():
+        for i, (name, obj) in enumerate(self.viewer3D.toy_objects.items()):
+            self.corrected_list.append(set())
             self.ToyBox.addItem(name)
             self.toy_list.append({"name":name, "obj":obj})
         self.ToyBox.currentIndexChanged.connect(self.index_changed_toy)
@@ -300,10 +300,25 @@ class CorrectionWindowToys(QWidget):
         self.update_info()
         name = self.toy_list[self.current_toy]["name"]
         self.viewer3D.toy_objects[name]["item"].opts['drawEdges'] = True
+        
+        self.frame_list = []
+        self.frame_listW.clear()
+        for i, f in enumerate(self.corrected_list[self.current_toy]):
+            self.frame_listW.addItem(ListWidgetItem("{} - NA".format(f)))
+            self.frame_listW.item(i).setBackground(Qt.green)
+            self.frame_list.append(f)
+        self.frame_listW.setCurrentRow(0)
+        self.frame_list = np.sort(self.frame_list)
         return
     
     def index_changed_combo(self, index):
         self.segmentIndex = index
+        return
+    
+    def update_combo_toy(self):
+        for i, toy in enumerate(self.toy_list):
+            if len(toy["obj"]["data"]) > 0:
+                self.ToyBox.model().item(i).setBackground(Qt.green)
         return
     
     def update_combobox(self):
@@ -324,7 +339,7 @@ class CorrectionWindowToys(QWidget):
 
     def add_frame_range(self):
         curr_toy = self.toy_list[self.current_toy]["obj"]
-        if not "data" in curr_toy: return
+
         dialog = ThreeEntryDialog(self)
         ok = dialog.exec_() 
 
@@ -332,8 +347,10 @@ class CorrectionWindowToys(QWidget):
             start, end, step = dialog.getInputs()
             L = list(curr_toy["data"].keys())
             for x in np.arange(start, end, step, dtype=int):
-                if x in self.frame_list or x not in L: continue
-                
+                if x in self.frame_list: continue
+                if x not in curr_toy["data"]:
+                    curr_toy["data"][x] = {}
+                curr_toy["data"][x]["p3d"] = np.copy(curr_toy["center"])
                 self.frame_list = np.append(self.frame_list, x)
                 self.frame_listW.addItem(ListWidgetItem("{} - NA".format(x)))
             self.frame_list = np.sort(self.frame_list)
@@ -359,10 +376,8 @@ class CorrectionWindowToys(QWidget):
             print("Frame already selected")
             return
         curr_toy = self.toy_list[self.current_toy]["obj"]
-        if not "data" in curr_toy: return
         if frame not in curr_toy["data"]:
-            print("Frame does not information")
-            return  
+            curr_toy["data"] = {frame:{"p3d":curr_toy["center"]}}
         self.frame_list = np.append(self.frame_list, frame)
         self.frame_list = np.sort(self.frame_list)
         print(self.frame_list)
@@ -383,9 +398,7 @@ class CorrectionWindowToys(QWidget):
     def add_frame_many(self):
         value, ok = QInputDialog.getInt(self, 'Add frames at fixed rate', 'Enter a frame rate \n(single entry)')
         curr_toy = self.toy_list[self.current_toy]["obj"]
-        if not "data" in curr_toy:
-            print("No data for toy: " , self.current_toy)
-            return
+        if len(curr_toy["data"]) == 0: return
         L = list(curr_toy["data"].keys())
         if value <= 5:
             print("Frame rate too small")
@@ -415,8 +428,8 @@ class CorrectionWindowToys(QWidget):
         self.frame_list = np.delete(self.frame_list,self.curr_indice)
         self.frame_listW.takeItem(self.curr_indice)
         self.curr_indice = self.frame_listW.currentRow()
-        if f in self.corrected_list:
-            self.corrected_list.remove(f)
+        if f in self.corrected_list[self.current_toy]:
+            self.corrected_list[self.current_toy].remove(f)
         if len(self.frame_list) == 0: 
             self.curr_indice = -1
             self.framelabel.setText("No Frames")
@@ -426,7 +439,7 @@ class CorrectionWindowToys(QWidget):
         if len(self.frame_list) == 0 or self.curr_indice == -1: return
         curr_frame = self.frame_list[self.curr_indice]
         curr_toy = self.toy_list[self.current_toy]["obj"]
-        if not "data" in curr_toy and not curr_frame in curr_toy["data"]:
+        if not curr_frame in curr_toy["data"]:
             return
         data = curr_toy["data"][curr_frame]
         self.memory_buffer = copy.deepcopy(data)
@@ -436,7 +449,7 @@ class CorrectionWindowToys(QWidget):
         if self.memory_buffer is None: return
         curr_frame = self.frame_list[self.curr_indice]
         curr_toy = self.toy_list[self.current_toy]["obj"]
-        if not "data" in curr_toy and not curr_frame in curr_toy["data"]:
+        if not curr_frame in curr_toy["data"]:
             return  
 
         curr_toy["data"][curr_frame] = copy.deepcopy(self.memory_buffer)
@@ -448,7 +461,7 @@ class CorrectionWindowToys(QWidget):
         if len(self.frame_list) == 0: return
         curr_frame = self.frame_list[self.curr_indice]
         curr_toy = self.toy_list[self.current_toy]["obj"]
-        if not "data" in curr_toy and not curr_frame in curr_toy["data"]:
+        if not curr_frame in curr_toy["data"]:
             return
         x, y, z = self.toy_list[self.current_toy]["obj"]["center"]
         self.max_XEdit.setValue(x)
@@ -510,12 +523,14 @@ class CorrectionWindowToys(QWidget):
         if self.curr_indice == -1: return
         curr_frame = self.frame_list[self.curr_indice]
         toy = self.toy_list[self.current_toy]["obj"]
-        if "data" not in toy: toy["data"] = {curr_frame:{"p3d":toy["center"]}}
-        else: toy["data"][curr_frame]["p3d"] = toy["center"]
+        if not curr_frame in toy["data"]: 
+            self.ToyBox.model().item(self.current_toy).setBackground(Qt.green)
+            toy["data"][curr_frame]  = {}
+        toy["data"][curr_frame]["p3d"] = toy["center"]
         
         self.frame_id.emit(curr_frame)
-        if curr_frame not in self.corrected_list:
-            self.corrected_list.add(curr_frame)
+        if curr_frame not in self.corrected_list[self.current_toy]:
+            self.corrected_list[self.current_toy].add(curr_frame)
         self.frame_listW.item(self.curr_indice).setBackground(Qt.green)
         self.project2D()
         return
@@ -539,32 +554,33 @@ class CorrectionWindowToys(QWidget):
         return 
 
     def propagate(self, threshold = 30):
-        if len(self.corrected_list) == 0: 
+        if len(self.corrected_list[self.current_toy]) == 0: 
             print("No frame corrected")
             return 
-        return
-        corrected_list = sorted(self.corrected_list)
+        toy = self.toy_list[self.current_toy]["obj"]
+        if len(toy["data"]) == 0: return
+        
+        corrected_list = sorted(self.corrected_list[self.current_toy])
         f = corrected_list[0]
         corrected_merged = [[f]]
 
-        self.viewer3D.attention[f]["corrected_flag_hand"] = 1
         for f in corrected_list[1:]:
-            self.viewer3D.attention[f]["corrected_flag_hand"] = 1
             prev = corrected_merged[-1][-1]
             if abs(f-prev) < threshold:
                 corrected_merged[-1].append(f)
             else:
                 corrected_merged.append([f])
         print(corrected_merged)        
-        self.write_attention("temp.txt", is_temp=True)
+        self.write_attention("temp.txt")
         
-        min_f, max_f = min(self.viewer3D.attention.keys()), max(self.viewer3D.attention.keys())
+        
+        min_f, max_f = min(toy["data"].keys()), max(toy["data"].keys())
         for seg in corrected_merged: 
             seg = sorted(seg)        
             start, end = max(min_f, seg[0]-threshold), min(seg[-1] + threshold, max_f)
-            while start not in self.viewer3D.attention:
+            while start not in toy["data"]:
                 start += 1
-            while end not in self.viewer3D.attention:
+            while end not in toy["data"]:
                 end -= 1
                                 
             print(seg, start, end)
@@ -572,47 +588,41 @@ class CorrectionWindowToys(QWidget):
             interp_list = np.unique([start] + seg + [end])
             interp_poses = []
             for f in interp_list:
-                p = self.viewer3D.attention[f]
-                h, v = p["handL"], p["handR"]
-                info = np.concatenate([h, v], axis=0)
-                interp_poses.append(info) 
+                interp_poses.append(toy["data"][f]["p3d"]) 
             interp_poses = np.array(interp_poses)   
             if len(interp_list) == 2:
                 interp_func = interpolate.interp1d(interp_list, interp_poses, axis=0, kind = 'linear')
             else: interp_func = interpolate.interp1d(interp_list, interp_poses, axis=0, kind = 'quadratic')
             x_interp = interp_func(np.arange(start, end, 1))
             old_p = None
-            
+
             for i, f in enumerate(range(start, end)):
-                p = self.viewer3D.attention[f]
+                p = toy["data"][f]["p3d"]
                 m = mask[i]
-
-                p["handL"] = (1-m)*p["handL"] + x_interp[i, :3]*m
-                p["handR"] = (1-m)*p["handR"] + x_interp[i, 3:]*m
-
-                if p["handL"] is None and old_p is not None:
+                toy["data"][f]["p3d"] = (1-m)*p + x_interp[i, :3]*m
+                if p is None and old_p is not None:
                     p = copy.deepcopy(old_p)
                     continue 
                 old_p = p                  
         return 
 
     def runGP(self, param):
-        return
+        toy = self.toy_list[self.current_toy]["obj"]
+        if len(toy["data"]) == 0: return
+
         x_tr, frame_list = [], []
-        for i, (f, p) in enumerate(self.viewer3D.attention.items()):
-            h, v = p["handL"], p["handR"]
-            info = np.concatenate([h, v], axis=0)
+        for i, (f, p) in enumerate(toy["data"].items()):
             if self.segmentIndex == 0: 
                 frame_list.append(f)
-                x_tr.append(info)
+                x_tr.append(p)
             else:
                 start, end = self.viewer3D.segment[self.segmentIndex-1]
                 if start <= f <= end: 
                     frame_list.append(f)
-                    x_tr.append(info)
+                    x_tr.append(p)
 
-        self.write_attention("temp.txt", is_temp=True)
-        N = 60 if param == 0 else len(self.viewer3D.attention) // 1800
+        self.write_attention("temp.txt")
+        N = 60 if param == 0 else len(toy["data"]) // 1800
         uncertain_frames, uncertain_scores = get_uncertainty(x_tr, max_n= N)
         uncertain_frames = np.array([frame_list[f] for f in uncertain_frames])
         ind = uncertain_frames.argsort()
@@ -623,16 +633,15 @@ class CorrectionWindowToys(QWidget):
         if len(self.frame_list) == 0:
             self.curr_indice = -1
             self.frame_listW.clear()
-            self.corrected_list = set()
+            self.corrected_list[self.current_toy] = set()
             return
 
         self.curr_indice = 0
         self.frame_listW.clear()
         for f, s in zip(self.frame_list, uncertain_scores):
             self.frame_listW.addItem(ListWidgetItem("{} - {:.2f}".format(f,s)))
-            self.viewer3D.attention[f]["corrected_flag_hand"] = 2
         self.frame_listW.setCurrentRow(0)
-        self.corrected_list = set()
+        self.corrected_list[self.current_toy] = set()
         self.update_frame()
         return
     
@@ -652,8 +661,8 @@ class CorrectionWindowToys(QWidget):
         QMessageBox.about(self, "Info Hands", message)
         return
 
-    def write_attention(self, fileName = None, is_temp = False):
-        #write_results(self, "hand", fileName = fileName, is_temp = is_temp)
+    def write_attention(self, fileName = None):
+        write_results_toy(self, fileName = fileName)
         return
 
     def finish(self):
@@ -668,7 +677,7 @@ class CorrectionWindowToys(QWidget):
             
         retval = msg.exec_()
         if retval == QMessageBox.Yes:
-            self.runGP()      
+            self.runGP(0)      
         return
 
 

@@ -382,7 +382,7 @@ class View3D(gl.GLViewWidget):
 
             mtl = self.mtl_data.contents[ob["material"][0]]
             if 'map_Kd' in  mtl:
-                continue
+                #continue
                 #if "Carpet3.png" in mtl["map_Kd"] or "SquareMat2.png" in mtl["map_Kd"]:
                 texture = {"coords":np.array(ob["textures"]).reshape(-1, 2) , "name":ob["material"][0], "mtl":self.mtl_data.contents}
                 mesh_data = gl.MeshData(vertexes=vert, faces=face)
@@ -416,7 +416,7 @@ class View3D(gl.GLViewWidget):
                 toy.parseMeshData()
                 self.addItem(toy)
                 toy.opts['drawEdges'] = False
-                self.toy_objects[name.replace("toy_", "")] = {"item":toy, "center":np.mean(vert, axis = 0)}
+                self.toy_objects[name.replace("toy_", "")] = {"item":toy, "center":np.mean(vert, axis = 0), "data":{}}
                 continue
             
             vertices.append(vert)
@@ -665,14 +665,12 @@ class View3D(gl.GLViewWidget):
         for n, obj in self.toy_objects.items():
             name2 = n
             if n in TOY_MAPPING: name2 = TOY_MAPPING[n]
-            print(n, name2, n in data)
-            if name2 in data:
+            if name2 in data and len(data[name2]) > 0:
                 obj["data"] = data[name2]
                 min_f = min(data[name2].keys())
                 info = data[name2][min_f]
                 offset = info["p3d"] - obj["center"]
                 obj["center"] = info["p3d"]
-                print(name2, info["p3d"])
                 obj["item"].translate(offset[0], offset[1], offset[2])
         
         return
