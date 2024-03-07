@@ -10,6 +10,7 @@ from DevEv.Viewer3D.Viewer3DApp import View3D
 from DevEv.ViewerVideo.VideoWidgetApp import VideoApp
 from DevEv.ViewerCorrection.WidgetCorrection import CorrectionWindow
 from DevEv.ViewerCorrection.WidgetCorrectionHand import CorrectionWindowHand
+from DevEv.ViewerCorrection.WidgetCorrectionToys import CorrectionWindowToys
 
 class VideoWindow(QMainWindow):
 
@@ -45,7 +46,17 @@ class VideoWindow(QMainWindow):
         self.correctionWidgetHands.project3dButtonLeft.clicked.connect(self.mediaPlayer.send_annotation_handL)
         self.correctionWidgetHands.project3dButtonRight.clicked.connect(self.mediaPlayer.send_annotation_handR)
         self.mediaPlayer.annotations_id.connect(self.correctionWidgetHands.project3D)
-        
+
+
+        self.correctionWidgetToys = CorrectionWindowToys(self.main3Dviewer)
+        self.correctionWidgetToys.setWindowFlags(Qt.WindowStaysOnTopHint)
+        self.correctionWidgetToys.pose2d.connect(self.mediaPlayer.update_image_proj)
+        self.correctionWidgetToys.frame_id.connect(self.setPosition)
+        self.correctionWidgetToys.open_id.connect(self.mediaPlayer.set_annotation)
+        self.correctionWidgetToys.open_id.connect(self.main3Dviewer.set_annotation)     
+        self.correctionWidgetToys.project3dButton.clicked.connect(self.mediaPlayer.send_annotation_toy)   
+        self.mediaPlayer.annotations_id.connect(self.correctionWidgetToys.project3D)   
+
         # Button
         self.playButton = QPushButton()
         self.playButton.setEnabled(False)
@@ -176,6 +187,11 @@ class VideoWindow(QMainWindow):
         openAtt2.setStatusTip('Open attention file without history')
         openAtt2.triggered.connect(lambda checked, param=True: self.openFileAtt(param) )
 
+        openToy = QAction(QIcon('open.png'), '&Open Toy file', self)        
+        openToy.setShortcut('Ctrl+L')
+        openToy.setStatusTip('Opentoy file')
+        openToy.triggered.connect(lambda checked, param=True: self.openFileToys(param) )
+
 
         openKpt = QAction(QIcon('open.png'), '&Open Keypoint', self)        
         openKpt.setShortcut('Ctrl+K')
@@ -215,7 +231,12 @@ class VideoWindow(QMainWindow):
         correctHAction.setShortcut('Ctrl+H')
         correctHAction.setStatusTip('Correction Tool Hands')
         correctHAction.triggered.connect(self.correctHSelect)
-        
+
+        correctToyAction = QAction(QIcon('exit.png'), '&Toys correction tool', self)        
+        correctToyAction.setShortcut('Ctrl+T')
+        correctToyAction.setStatusTip('Correction Tool Toys')
+        correctToyAction.triggered.connect(self.correctToySelect)
+                
         self.roomActions = []
         titles = ['&Hide Room', '&Wireframe Room', '&Transparent Room', '&Solid Room']
         tips = ['Hide 3D Room', 'Show 3D Room in wireframe', 'Show 3D Room with transparence', 'Show 3D Room']
@@ -241,6 +262,7 @@ class VideoWindow(QMainWindow):
         fileMenu.addAction(openAction)
         fileMenu.addAction(openAtt)
         fileMenu.addAction(openAtt2)
+        fileMenu.addAction(openToy)
         fileMenu.addAction(openKpt)
         fileMenu.addAction(resetAction)
         fileMenu.addAction(load2dAction)
@@ -256,6 +278,7 @@ class VideoWindow(QMainWindow):
         correctMenu = menuBar.addMenu('&Correction')
         correctMenu.addAction(correctAction)
         correctMenu.addAction(correctHAction)
+        correctMenu.addAction(correctToyAction)
 
         roomMenu = menuBar.addMenu('&Room View')
         for a in self.roomActions:
@@ -386,6 +409,7 @@ class VideoWindow(QMainWindow):
         self.maxInt.setTop(self.mediaPlayer.duration)
         self.correctionWidget.setHW(self.mediaPlayer.height_video, self.mediaPlayer.width_video)      
         self.correctionWidgetHands.setHW(self.mediaPlayer.height_video, self.mediaPlayer.width_video)  
+        self.correctionWidgetToys.setHW(self.mediaPlayer.height_video, self.mediaPlayer.width_video)  
         self.mediaPlayer.showImage() 
 
     def openFile(self):
@@ -406,7 +430,15 @@ class VideoWindow(QMainWindow):
             self.correctionWidget.update_list_frames()
             self.correctionWidgetHands.update_list_frames()
             #self.compute2D()
-            
+
+    def openFileToys(self, as_new=False):
+        fileName, _ = QFileDialog.getOpenFileName(self, "Open Toy File",
+                QDir.currentPath(), "Numpy files (*.npy)")#, options=QFileDialog.DontUseNativeDialog)
+        
+        if fileName != '':
+            self.main3Dviewer.attention = self.main3Dviewer.read_toys(fileName, as_new=as_new)
+            #self.compute2D()            
+
     def compute2D(self):        
         self.mediaPlayer.compute2D(self.main3Dviewer.attention, self.correctionWidget.cams)
 
@@ -460,6 +492,7 @@ class VideoWindow(QMainWindow):
         self.camActions[cam_id].setChecked(True)
         self.correctionWidget.setCams(cam_id)
         self.correctionWidgetHands.setCams(cam_id)
+        self.correctionWidgetToys.setCams(cam_id)
         
     def correctSelect(self):
         self.mediaPlayer.stop_video()
@@ -484,7 +517,15 @@ class VideoWindow(QMainWindow):
         self.mediaPlayer.viz_flags["handR"] = True
         self.mediaPlayer.handLCheckBox.setChecked(True)
         self.mediaPlayer.handRCheckBox.setChecked(True)
-                
+
+    def correctToySelect(self):
+        self.mediaPlayer.stop_video()
+        self.correctionWidgetToys.show()
+        self.correctionWidgetToys.raise_()
+        self.correctionWidgetToys.update_frame()
+        self.mediaPlayer.set_annotation(True)
+        self.main3Dviewer.set_annotation(True)
+                        
     def exitCall(self):
         self.close()
 
@@ -493,6 +534,7 @@ class VideoWindow(QMainWindow):
         self.mediaPlayer.close_thread()
         self.correctionWidget.close()
         self.correctionWidgetHands.close()
+        self.correctionWidgetToys.close()
         event.accept()
 
 

@@ -49,6 +49,11 @@ view3Dparams_mat = {
     7: view3Dparams_room[7],
 }
 
+TOY_MAPPING = {
+    'pink_ball':'pink_ballon', 'tower_bloc':'red_tower', 'trolley':'cart', 'cylindertower':'tower', 'ball_container':'bucket',
+}
+
+
 def plane_intersect_batch(p0, u, p_co = np.array([0,0,0]), p_no= np.array([0,0,1]), epsilon=1e-6):
     dot = np.dot(p_no , u)
     valids = abs(dot) > epsilon
@@ -99,6 +104,7 @@ class View3D(gl.GLViewWidget):
         self.click_enable = False
         self.a_pressed = False
         self.corrected_frames = {}
+        self.toy_objects = {}
         self.default_length = 0.5
         self.segment = None
 
@@ -349,10 +355,7 @@ class View3D(gl.GLViewWidget):
         'glLightfv' : (GL_LIGHT1, GL_AMBIENT, (0.5, 0.5, 0.5, 1.0)),
         'glLightfv': (GL_LIGHT1, GL_DIFFUSE, (1, 1, 1, 1)),
         #'glLightfv': (GL_LIGHT1, GL_SPECULAR, (0.5, 0.5, 0.5, 1)),
-
-
-            }  
-
+        }  
 
         mat_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/scene/Room.obj')
         mtl_file = pkg_resources.resource_filename('DevEv', 'metadata/RoomData/scene/Room.mtl')
@@ -365,20 +368,21 @@ class View3D(gl.GLViewWidget):
         #normals = []
         colors = []
         self.room_textured = []
+        self.toy_objects = {}
         count = 0
         for name, ob in obj.content.items():
             if len(ob["material"]) == 0: 
                 print(name, np.array(ob["vertexes"]).shape)
                 continue
             if "camera" in name: continue
-            #if "toy" in name: continue
-
+            
             vert = np.array(ob["vertexes"]).reshape(-1, 3)
             face = np.array(ob["faces"]).reshape(-1, 3)
             #normal = np.array(ob["normals"]).reshape(-1, 3)
 
             mtl = self.mtl_data.contents[ob["material"][0]]
             if 'map_Kd' in  mtl:
+                continue
                 #if "Carpet3.png" in mtl["map_Kd"] or "SquareMat2.png" in mtl["map_Kd"]:
                 texture = {"coords":np.array(ob["textures"]).reshape(-1, 2) , "name":ob["material"][0], "mtl":self.mtl_data.contents}
                 mesh_data = gl.MeshData(vertexes=vert, faces=face)
@@ -405,6 +409,16 @@ class View3D(gl.GLViewWidget):
                 color.append(c)
             #print(name, ob["material"], count, face[-1][-1])
             color = np.concatenate(color, axis = 0)
+            
+            if "toy" in name: 
+                mesh_data = gl.MeshData(vertexes=vert, faces=face, vertexColors=color)
+                toy = gl.GLMeshItem(meshdata=mesh_data, smooth=True, drawEdges=True, glOptions=option_gl, edgeColor=(0.6, 0.1, 0.1, 1.0))
+                toy.parseMeshData()
+                self.addItem(toy)
+                toy.opts['drawEdges'] = False
+                self.toy_objects[name.replace("toy_", "")] = {"item":toy, "center":np.mean(vert, axis = 0)}
+                continue
+            
             vertices.append(vert)
             colors.append(color)
             #normals.append(normal)
@@ -532,6 +546,8 @@ class View3D(gl.GLViewWidget):
         self.room.setVisible(not state)
         for obj in self.room_textured:
             obj.setVisible(not state)
+        for n, obj in self.toy_objects.items():
+            obj["item"].setVisible(not state)        
         return
 
     def setDome(self, state):
@@ -641,6 +657,26 @@ class View3D(gl.GLViewWidget):
 
         return
 
+    def read_toys(self, filename= "", as_new = False):
+        if not os.path.exists(filename): 
+            return
+        
+        data = np.load(filename, allow_pickle=True).item()
+        for n, obj in self.toy_objects.items():
+            name2 = n
+            if n in TOY_MAPPING: name2 = TOY_MAPPING[n]
+            print(n, name2, n in data)
+            if name2 in data:
+                obj["data"] = data[name2]
+                min_f = min(data[name2].keys())
+                info = data[name2][min_f]
+                offset = info["p3d"] - obj["center"]
+                obj["center"] = info["p3d"]
+                print(name2, info["p3d"])
+                obj["item"].translate(offset[0], offset[1], offset[2])
+        
+        return
+    
     def read_attention(self, filename= "DevEv/metadata/RoomData/attention.txt", as_new=False):
         if not os.path.exists(filename): 
             return
@@ -749,8 +785,16 @@ class View3D(gl.GLViewWidget):
             #self.current_item["skline"].setData(pos = self.keypoints[f]["l"])
             #self.current_item["skline"].setVisible(True)
             #self.current_item["skpoint"].setVisible(True)
-
-        if f not in self.attention: 
+        for n, obj in self.toy_objects.items():
+            if not "data" in obj: continue
+            if not f in obj["data"]: continue
+            info = obj["data"][f]
+            offset = info["p3d"] - obj["center"]
+            obj["center"] = obj["center"] + offset
+            obj["item"].translate(offset[0], offset[1], offset[2])
+                
+                
+        if self.attention is None or f not in self.attention: 
             return
                 
         att = self.attention[f]["att"]

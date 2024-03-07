@@ -73,8 +73,11 @@ def draw_axis(img, yaw, pitch, roll, tdx=None, tdy=None, size = 50):
 
 def draw_info_view(img, p2d, flag = None):
     if flag is None: flag = {"att":True, "head":True, "handL":True, "handR":True}
+    print(p2d)
     for c, info in p2d.items():
-        if type(c) != int: continue                
+        if type(c) != int: continue    
+        if "toy" in info:             
+            img = cv2.circle(img, info["toy"], radius=15, color= (0,255,255), thickness=6)
         if "att" in info and flag["att"]:
             img = cv2.circle(img, info["att"], radius=15, color= (0,0,255), thickness=8)
         if "head" in info and flag["head"]:
@@ -266,7 +269,6 @@ class VideoApp(QWidget):
     def update_image_proj(self, poses):
         self.stop_video()
         if "update" in poses:
-            print(poses["update"])
             if poses["update"]: self.update_2d_info(poses)
             del poses["update"]     
         self.p2d = poses
@@ -310,7 +312,13 @@ class VideoApp(QWidget):
         self.clicked_att["type"] = "handR"
         self.annotations_id.emit(self.clicked_att)
         self.clicked_att = {}
-        
+
+    @pyqtSlot(bool)
+    def send_annotation_toy(self, state):
+        self.clicked_att["type"] = "toy"
+        self.annotations_id.emit(self.clicked_att)
+        self.clicked_att = {}
+               
     def convert_cv_qt(self, cv_img):
         """Convert from an opencv image to QPixmap"""
         cv_img = self.select_view(cv_img)

@@ -152,6 +152,31 @@ def project_2d(poses, cams, h, w, is_mat = False):
             
     return p2d_list
 
+def project_2d_simple(p3d, cams, h, w, is_mat = False):
+    hh, ww = h//4, w//2
+    
+    p2d_list = {}
+    for c, cam in cams.items():
+        t = -cam["R"] @ cam["T"]
+        p2d, _ = cv2.projectPoints(np.array(p3d).T, cam["r"], t, cam["mtx"], cam["dist"])
+        p2d = p2d.reshape(-2)
+        # Check if head is present
+        if not (0 < p2d[0] < ww and 0 < p2d[1] < hh): continue
+        # Check if Attention point is present
+
+        if c == 1: p2d[0] += ww
+        elif c == 2: p2d[1] += hh
+        elif c == 3:  p2d += np.array([ww, hh])
+        elif c == 4:  p2d[1] += 2*hh
+        elif c == 5:  p2d += np.array([ww, 2*hh])
+        elif c == 6:  p2d[1] += 3*hh
+        elif c == 7:  p2d += np.array([ww, 3*hh])
+        p2d_list[c] = {}
+        #if 0 < p2d[0,0] < w and 0 < p2d[0,1] < h:
+        p2d_list[c]= p2d.astype("int")
+            
+    return p2d_list
+
 def line_intersect(pt1,u1,pt2,u2):
     u1 = u1 / np.linalg.norm(u1)
     u2 = u2 / np.linalg.norm(u2)
