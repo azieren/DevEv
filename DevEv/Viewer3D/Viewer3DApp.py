@@ -50,7 +50,7 @@ view3Dparams_mat = {
 }
 
 TOY_MAPPING = {
-    'pink_ball':'pink_ballon', 'tower_bloc':'red_tower', 'trolley':'cart', 'cylindertower':'tower', 'ball_container':'bucket',
+    'pink_ball':'pink_ballon', 'tower_bloc':'red_tower', 'cylinder_tower':'tower', 'ball_container':'bucket',
 }
 
 

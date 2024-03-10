@@ -50,8 +50,8 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd  -o 0.33 0.33 0.33 Textures\clock2.png
-map_d  -o 0.33 0.33 0.33 Textures\clock2.png
+map_Kd  -o 0.33 0.33 0.33 Textures/clock2.png
+map_d  -o 0.33 0.33 0.33 Textures/clock2.png
 
 newmtl BlackMetal
 Ns 200.000000
@@ -122,7 +122,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd  -o 0.0142857 0.0142857 1 Textures\Carpet2.jpg
+map_Kd  -o 0.0142857 0.0142857 1 Textures/Carpet2.jpg
 
 newmtl CheckPattern
 Ns 200.000000
@@ -133,8 +133,8 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd  -s 0.024 0.024 0 -o 0.2165 0.2165 1 Textures\SquareMat.png
-map_d  -s 0.024 0.024 0 -o 0.2165 0.2165 1 Textures\SquareMat.png
+map_Kd  -s 0.024 0.024 0 -o 0.2165 0.2165 1 Textures/SquareMat.png
+map_d  -s 0.024 0.024 0 -o 0.2165 0.2165 1 Textures/SquareMat.png
 
 newmtl Coach
 Ns 200.000000
@@ -285,7 +285,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd  Textures\L1.tiff
+map_Kd  Textures/L1.png
 
 newmtl L4
 Ns 200.000000
@@ -296,7 +296,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd  Textures\L4.tiff
+map_Kd  Textures/L4.png
 
 newmtl L5
 Ns 200.000000
@@ -307,7 +307,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd  Textures\L5.tiff
+map_Kd  Textures/L5.png
 
 newmtl LightBlueMatte
 Ns 200.000000
@@ -348,7 +348,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd  -s 20 0 0 -o 0.05 0.05 1 Textures\Wood3.jpg
+map_Kd  -s 20 0 0 -o 0.05 0.05 1 Textures/Wood3.jpg
 
 newmtl LightWood.001
 Ns 200.000000
@@ -359,7 +359,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd  -s 20 0 0 -o 0.05 0.05 1 Textures\Wood3.jpg
+map_Kd  -s 20 0 0 -o 0.05 0.05 1 Textures/Wood3.jpg
 
 newmtl LightWood.003
 Ns 200.000000
@@ -370,7 +370,17 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd  -s 20 0 0 -o 0.05 0.05 1 Textures\Wood3.jpg
+map_Kd  -s 20 0 0 -o 0.05 0.05 1 Textures/Wood3.jpg
+
+newmtl Material
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
 
 newmtl MidBlueMatte
 Ns 200.000000
@@ -431,8 +441,8 @@ Ke 0.016400 0.016900 0.017100
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd  -o 0.2 0.25 1 Textures\Painting1.png
-map_d  -o 0.2 0.25 1 Textures\Painting1.png
+map_Kd  -o 0.2 0.25 1 Textures/Painting1.png
+map_d  -o 0.2 0.25 1 Textures/Painting1.png
 
 newmtl Picture2
 Ns 200.000000
@@ -443,8 +453,8 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd  -o 0.294118 0.25 1 Textures\Picture2.png
-map_d  -o 0.294118 0.25 1 Textures\Picture2.png
+map_Kd  -o 0.294118 0.25 1 Textures/Picture2.png
+map_d  -o 0.294118 0.25 1 Textures/Picture2.png
 
 newmtl Picture3
 Ns 200.000000
@@ -455,8 +465,8 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd  -o 0.294118 0.25 1 Textures\Picture1.png
-map_d  -o 0.294118 0.25 1 Textures\Picture1.png
+map_Kd  -o 0.294118 0.25 1 Textures/Picture1.png
+map_d  -o 0.294118 0.25 1 Textures/Picture1.png
 
 newmtl Picture4
 Ns 200.000000
@@ -467,8 +477,8 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd  -o 0.3125 0.25 1 Textures\Painting2.png
-map_d  -o 0.3125 0.25 1 Textures\Painting2.png
+map_Kd  -o 0.3125 0.25 1 Textures/Painting2.png
+map_d  -o 0.3125 0.25 1 Textures/Painting2.png
 
 newmtl PinkBall
 Ns 200.000000
@@ -509,7 +519,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 0.982249
 illum 9
-map_Kd  -o 0.05 0.05 1 Textures\PressureMat.jpg
+map_Kd  -o 0.05 0.05 1 Textures/PressureMat.jpg
 
 newmtl PupleRubber
 Ns 63.117920
@@ -520,6 +530,16 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 3
+
+newmtl PurpleBall
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.424809 0.012531 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
 
 newmtl PurpleMatte
 Ns 200.000000
@@ -631,16 +651,6 @@ Ni 1.450000
 d 0.502959
 illum 9
 
-newmtl TransparentYellow
-Ns 200.000000
-Ka 1.000000 1.000000 1.000000
-Kd 0.663100 0.599300 0.221000
-Ks 0.500000 0.500000 0.500000
-Ke 0.000000 0.000000 0.000000
-Ni 1.450000
-d 0.698225
-illum 9
-
 newmtl TransprantBall
 Ns 200.000000
 Ka 0.500000 0.500000 0.500000
@@ -660,8 +670,8 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd  -o 0.02 0.0111111 1 Textures\Walkway.png
-map_d  -o 0.02 0.0111111 1 Textures\Walkway.png
+map_Kd  -o 0.02 0.0111111 1 Textures/Walkway.png
+map_d  -o 0.02 0.0111111 1 Textures/Walkway.png
 
 newmtl Walkway2
 Ns 200.000000
@@ -672,8 +682,8 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd  -o 0.0333333 0.033 0.033 Textures\Walkway.png
-map_d  -o 0.0333333 0.033 0.033 Textures\Walkway.png
+map_Kd  -o 0.0333333 0.033 0.033 Textures/Walkway.png
+map_d  -o 0.0333333 0.033 0.033 Textures/Walkway.png
 
 newmtl WhiteLight
 Ns 200.000000
@@ -714,7 +724,7 @@ Ke 0.096500 0.069900 0.052900
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd  -s 1 0 0 -o 1 0.5 1 Textures\Wood2.jpg
+map_Kd  -s 1 0 0 -o 1 0.5 1 Textures/Wood2.jpg
 
 newmtl Wood2
 Ns 200.000000
@@ -725,7 +735,7 @@ Ke 0.045100 0.042700 0.029200
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd  -o 0.2 0.1 1 Textures\Wood1.jpg
+map_Kd  -o 0.2 0.1 1 Textures/Wood1.jpg
 
 newmtl YellowPlastic
 Ns 200.000000
@@ -796,7 +806,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd  Textures\L2.tiff
+map_Kd  Textures/L2.png
 
 newmtl lambert49
 Ns 200.000000
@@ -807,7 +817,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd  Textures\L3.tiff
+map_Kd  Textures/L3.png
 
 newmtl lambert52
 Ns 200.000000
@@ -818,7 +828,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd  Textures\L6.tiff
+map_Kd  Textures/L6.png
 
 newmtl lambert53
 Ns 200.000000
@@ -829,7 +839,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd  Textures\elephant.tiff
+map_Kd  Textures/elephant.png
 
 newmtl lambert56
 Ns 200.000000

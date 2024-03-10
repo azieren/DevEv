@@ -53,7 +53,7 @@ class CorrectionWindowToys(QWidget):
         self.frame_listW = QListWidget()
         self.frame_listW.setSelectionMode(QAbstractItemView.SingleSelection)
         for f in self.frame_list:
-            self.frame_listW.addItem(ListWidgetItem("{} - NA".format(f)))
+            self.frame_listW.addItem(ListWidgetItem("{:d} - NA".format(f)))
         self.frame_listW.itemDoubleClicked.connect(self.select_frame)
         self.frame_listW.setCurrentRow(self.curr_indice)
         self.frame_listW.setSortingEnabled(True)
@@ -304,11 +304,11 @@ class CorrectionWindowToys(QWidget):
         self.frame_list = []
         self.frame_listW.clear()
         for i, f in enumerate(self.corrected_list[self.current_toy]):
-            self.frame_listW.addItem(ListWidgetItem("{} - NA".format(f)))
+            self.frame_listW.addItem(ListWidgetItem("{:d} - NA".format(f)))
             self.frame_listW.item(i).setBackground(Qt.green)
             self.frame_list.append(f)
         self.frame_listW.setCurrentRow(0)
-        self.frame_list = np.sort(self.frame_list)
+        self.frame_list = np.sort(self.frame_list).astype(int)
         return
     
     def index_changed_combo(self, index):
@@ -352,8 +352,8 @@ class CorrectionWindowToys(QWidget):
                     curr_toy["data"][x] = {}
                 curr_toy["data"][x]["p3d"] = np.copy(curr_toy["center"])
                 self.frame_list = np.append(self.frame_list, x)
-                self.frame_listW.addItem(ListWidgetItem("{} - NA".format(x)))
-            self.frame_list = np.sort(self.frame_list)
+                self.frame_listW.addItem(ListWidgetItem("{:d} - NA".format(x)))
+            self.frame_list = np.sort(self.frame_list).astype(int)
             self.frame_listW.setCurrentRow(0)
             self.curr_indice = 0
             self.update_frame()
@@ -379,10 +379,10 @@ class CorrectionWindowToys(QWidget):
         if frame not in curr_toy["data"]:
             curr_toy["data"] = {frame:{"p3d":curr_toy["center"]}}
         self.frame_list = np.append(self.frame_list, frame)
-        self.frame_list = np.sort(self.frame_list)
+        self.frame_list = np.sort(self.frame_list).astype(int)
         print(self.frame_list)
         
-        self.frame_listW.addItem(ListWidgetItem("{} - NA".format(frame)))
+        self.frame_listW.addItem(ListWidgetItem("{:d} - NA".format(frame)))
         self.curr_indice = self.frame_listW.currentRow()
         if len(self.frame_list) == 1: 
             self.frame_listW.setCurrentRow(0)
@@ -415,8 +415,8 @@ class CorrectionWindowToys(QWidget):
             for x in np.arange(start, end, value, dtype=int):
                 if not x in L or x in self.frame_list: continue
                 self.frame_list = np.append(self.frame_list, x)
-                self.frame_listW.addItem(ListWidgetItem("{} - NA".format(x)))
-            self.frame_list = np.sort(self.frame_list)
+                self.frame_listW.addItem(ListWidgetItem("{:d} - NA".format(x)))
+            self.frame_list = np.sort(self.frame_list).astype(int)
             self.frame_listW.setCurrentRow(0)
             self.curr_indice = 0
             self.update_frame()
@@ -558,7 +558,7 @@ class CorrectionWindowToys(QWidget):
             print("No frame corrected")
             return 
         toy = self.toy_list[self.current_toy]["obj"]
-        if len(toy["data"]) == 0: return
+        if len(toy["data"]) < 2: return
         
         corrected_list = sorted(self.corrected_list[self.current_toy])
         f = corrected_list[0]
@@ -571,7 +571,7 @@ class CorrectionWindowToys(QWidget):
             else:
                 corrected_merged.append([f])
         print(corrected_merged)        
-        self.write_attention("temp.txt")
+        self.write_attention("temp_toy.npy")
         
         
         min_f, max_f = min(toy["data"].keys()), max(toy["data"].keys())
@@ -608,7 +608,7 @@ class CorrectionWindowToys(QWidget):
 
     def runGP(self, param):
         toy = self.toy_list[self.current_toy]["obj"]
-        if len(toy["data"]) == 0: return
+        if len(toy["data"]) < 60: return
 
         x_tr, frame_list = [], []
         for i, (f, p) in enumerate(toy["data"].items()):
@@ -621,7 +621,7 @@ class CorrectionWindowToys(QWidget):
                     frame_list.append(f)
                     x_tr.append(p)
 
-        self.write_attention("temp.txt")
+        self.write_attention("temp_toy.npy")
         N = 60 if param == 0 else len(toy["data"]) // 1800
         uncertain_frames, uncertain_scores = get_uncertainty(x_tr, max_n= N)
         uncertain_frames = np.array([frame_list[f] for f in uncertain_frames])

@@ -393,7 +393,6 @@ class GLMeshTexturedItem(GLGraphicsItem.GLGraphicsItem):
                         scale = np.array(mtl['map_Kd']['scale'])
                         offset = np.array(mtl['map_Kd']['offset'])
                         t = np.array(self.textures["coords"]) / scale[:2] - offset[:2]/scale[:2]
-
                         glTexCoordPointerf(t)
                         glBindTexture(GL_TEXTURE_2D, mtl['texture_Kd'])
 
