@@ -211,7 +211,7 @@ class CorrectionWindowToys(QWidget):
         self.ToyBox = QComboBox()
         self.toy_list = []
         self.current_toy = 0
-        for i, (name, obj) in enumerate(self.viewer3D.toy_objects.items()):
+        for i, (name, obj) in enumerate(self.viewer3D.room.toy_objects.items()):
             self.corrected_list.append(set())
             self.ToyBox.addItem(name)
             self.toy_list.append({"name":name, "obj":obj})
@@ -295,11 +295,11 @@ class CorrectionWindowToys(QWidget):
 
     def index_changed_toy(self, index):
         name = self.toy_list[self.current_toy]["name"]
-        self.viewer3D.toy_objects[name]["item"].opts['drawEdges'] = False
+        self.viewer3D.room.toy_objects[name]["item"].opts['drawEdges'] = False
         self.current_toy = index
         self.update_info()
         name = self.toy_list[self.current_toy]["name"]
-        self.viewer3D.toy_objects[name]["item"].opts['drawEdges'] = True
+        self.viewer3D.room.toy_objects[name]["item"].opts['drawEdges'] = True
         
         self.frame_list = []
         self.frame_listW.clear()
@@ -324,7 +324,7 @@ class CorrectionWindowToys(QWidget):
     def update_combobox(self):
         self.ComboBox.clear()
         self.ComboBox.addItem('All Segments')        
-        segments = self.viewer3D.segment
+        segments = self.viewer3D.segment.current
         if segments is None: return
         for i, (s,e) in enumerate(segments):
             self.ComboBox.addItem('S{} -> {} -{}'.format(i, s, e))
@@ -350,7 +350,6 @@ class CorrectionWindowToys(QWidget):
                 if x in self.frame_list: continue
                 if x not in curr_toy["data"]:
                     curr_toy["data"][x] = {}
-                curr_toy["data"][x]["p3d"] = np.copy(curr_toy["center"])
                 self.frame_list = np.append(self.frame_list, x)
                 self.frame_listW.addItem(ListWidgetItem("{:d} - NA".format(x)))
             self.frame_list = np.sort(self.frame_list).astype(int)
@@ -377,11 +376,10 @@ class CorrectionWindowToys(QWidget):
             return
         curr_toy = self.toy_list[self.current_toy]["obj"]
         if frame not in curr_toy["data"]:
-            curr_toy["data"] = {frame:{"p3d":curr_toy["center"]}}
+            curr_toy["data"][frame] = {}
         self.frame_list = np.append(self.frame_list, frame)
         self.frame_list = np.sort(self.frame_list).astype(int)
-        print(self.frame_list)
-        
+  
         self.frame_listW.addItem(ListWidgetItem("{:d} - NA".format(frame)))
         self.curr_indice = self.frame_listW.currentRow()
         if len(self.frame_list) == 1: 
@@ -410,7 +408,7 @@ class CorrectionWindowToys(QWidget):
             if self.segmentIndex == 0: 
                 start, end = min(L), max(L)
             else:
-                start, end = self.viewer3D.segment[self.segmentIndex-1]       
+                start, end = self.viewer3D.segment.current[self.segmentIndex-1]       
             value = int(value)
             for x in np.arange(start, end, value, dtype=int):
                 if not x in L or x in self.frame_list: continue
@@ -439,7 +437,7 @@ class CorrectionWindowToys(QWidget):
         if len(self.frame_list) == 0 or self.curr_indice == -1: return
         curr_frame = self.frame_list[self.curr_indice]
         curr_toy = self.toy_list[self.current_toy]["obj"]
-        if not curr_frame in curr_toy["data"]:
+        if not curr_frame in curr_toy["data"] and "p3d" not in curr_toy["data"][curr_frame]:
             return
         data = curr_toy["data"][curr_frame]
         self.memory_buffer = copy.deepcopy(data)
@@ -449,8 +447,6 @@ class CorrectionWindowToys(QWidget):
         if self.memory_buffer is None: return
         curr_frame = self.frame_list[self.curr_indice]
         curr_toy = self.toy_list[self.current_toy]["obj"]
-        if not curr_frame in curr_toy["data"]:
-            return  
 
         curr_toy["data"][curr_frame] = copy.deepcopy(self.memory_buffer)
         self.update_frame() 
@@ -523,10 +519,13 @@ class CorrectionWindowToys(QWidget):
         if self.curr_indice == -1: return
         curr_frame = self.frame_list[self.curr_indice]
         toy = self.toy_list[self.current_toy]["obj"]
-        if not curr_frame in toy["data"]: 
-            self.ToyBox.model().item(self.current_toy).setBackground(Qt.green)
-            toy["data"][curr_frame]  = {}
-        toy["data"][curr_frame]["p3d"] = toy["center"]
+
+        self.ToyBox.model().item(self.current_toy).setBackground(Qt.green)
+        name = self.toy_list[self.current_toy]["name"]
+        if name not in self.viewer3D.room.toy_to_update:
+            self.viewer3D.room.toy_to_update.append(name)
+            
+        toy["data"][curr_frame]["p3d"] = np.copy(toy["center"])
         
         self.frame_id.emit(curr_frame)
         if curr_frame not in self.corrected_list[self.current_toy]:
@@ -558,9 +557,36 @@ class CorrectionWindowToys(QWidget):
             print("No frame corrected")
             return 
         toy = self.toy_list[self.current_toy]["obj"]
-        if len(toy["data"]) < 2: return
         
-        corrected_list = sorted(self.corrected_list[self.current_toy])
+        frame_list = sorted([x for x in toy["data"].keys() if "p3d" in toy["data"][x]])
+        if len(frame_list) < 2: return
+        
+        corrected_list = np.array(sorted(self.corrected_list[self.current_toy]))
+        to_keep = []
+        print("In propagation", corrected_list)
+
+        # First fill in missing data
+        for i in range(len(corrected_list)-1):
+            start = corrected_list[i]
+            if start+1 in frame_list:
+                to_keep.append(i)
+                while start < corrected_list[i+1] and start+1 in frame_list:
+                    start += 1
+                if start == corrected_list[i+1]: continue
+            end = corrected_list[i+1]
+            while end-1 in frame_list:
+                end -= 1
+            poses = np.array([toy["data"][start]["p3d"], toy["data"][end]["p3d"]])
+            interp_func = interpolate.interp1d(np.array([start,end]), poses, axis=0, kind = 'linear')    
+            x_interp = interp_func(np.arange(start, end, 1))
+            for i, f in enumerate(range(start, end)):
+                if f not in toy["data"]: toy["data"][f] = {}
+                toy["data"][f]["p3d"] = x_interp[i, :3]
+        
+        if corrected_list[-1]-1 in frame_list or  corrected_list[-1]+1 in frame_list: to_keep.append(i+1)               
+        if len(to_keep) == 0: return     
+        corrected_list = corrected_list[to_keep]
+        
         f = corrected_list[0]
         corrected_merged = [[f]]
 
@@ -570,6 +596,7 @@ class CorrectionWindowToys(QWidget):
                 corrected_merged[-1].append(f)
             else:
                 corrected_merged.append([f])
+
         print(corrected_merged)        
         self.write_attention("temp_toy.npy")
         
@@ -578,11 +605,11 @@ class CorrectionWindowToys(QWidget):
         for seg in corrected_merged: 
             seg = sorted(seg)        
             start, end = max(min_f, seg[0]-threshold), min(seg[-1] + threshold, max_f)
-            while start not in toy["data"]:
+            while start not in toy["data"].keys():
                 start += 1
-            while end not in toy["data"]:
+            while end not in toy["data"].keys():
                 end -= 1
-                                
+                                         
             print(seg, start, end)
             mask = build_mask([x-start for x in seg], end-start+1, threshold = threshold)[:, np.newaxis]
             interp_list = np.unique([start] + seg + [end])
@@ -616,7 +643,7 @@ class CorrectionWindowToys(QWidget):
                 frame_list.append(f)
                 x_tr.append(p)
             else:
-                start, end = self.viewer3D.segment[self.segmentIndex-1]
+                _, start, end = self.viewer3D.segment.current[self.segmentIndex-1]
                 if start <= f <= end: 
                     frame_list.append(f)
                     x_tr.append(p)
@@ -650,8 +677,8 @@ class CorrectionWindowToys(QWidget):
         if self.viewer3D.segment is None:
             message += "No segments\n"
         else:
-            for i, (s,e) in enumerate(self.viewer3D.segment):
-                message += "Segment {} -> {} - {}\n".format(i, s, e)
+            for i, (stype, s,e) in enumerate(self.viewer3D.segment):
+                message += "Segment {} -> {} - {} ({})\n".format(i, s, e, stype)
         if len(self.history_corrected) == 0:
             message += "\nNo Corrected Frames"
         else:
@@ -682,7 +709,7 @@ class CorrectionWindowToys(QWidget):
 
 
     def closeEvent(self, event):
-        for n, obj in self.viewer3D.toy_objects.items():
+        for n, obj in self.viewer3D.room.toy_objects.items():
             obj["item"].opts['drawEdges'] = False
         self.pose2d.emit({})
         self.open_id.emit(False)

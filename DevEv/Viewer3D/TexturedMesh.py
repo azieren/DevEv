@@ -70,7 +70,6 @@ class MTL(GLGraphicsItem.GLGraphicsItem):
             shape = image.shape
             texid = v['texture_Kd'] = glGenTextures(1)
             ids[path] = texid
-            print(path, shape, texid)
 
             glBindTexture(GL_TEXTURE_2D, texid)
             data = np.ascontiguousarray(image)
@@ -104,7 +103,7 @@ class MTL(GLGraphicsItem.GLGraphicsItem):
             shape = image.shape
             texid = v['texture_Kd'] = glGenTextures(1)
             ids[path] = texid
-            print(path, shape, texid)
+
             glBindTexture(GL_TEXTURE_2D, texid)
 
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)

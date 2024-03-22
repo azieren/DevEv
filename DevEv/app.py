@@ -11,6 +11,7 @@ from DevEv.ViewerVideo.VideoWidgetApp import VideoApp
 from DevEv.ViewerCorrection.WidgetCorrection import CorrectionWindow
 from DevEv.ViewerCorrection.WidgetCorrectionHand import CorrectionWindowHand
 from DevEv.ViewerCorrection.WidgetCorrectionToys import CorrectionWindowToys
+from DevEv.ViewerMultiFile.WidgetMultiFile import MultiFileVisualizer
 
 class VideoWindow(QMainWindow):
 
@@ -25,6 +26,9 @@ class VideoWindow(QMainWindow):
         # 3D view
         self.main3Dviewer = View3D()
         self.main3Dviewer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        
+        # MultiFile visualizer
+        self.MFvisualizer = MultiFileVisualizer(self.main3Dviewer)
 
         # Correction
         self.correctionWidget = CorrectionWindow(self.main3Dviewer)
@@ -135,10 +139,6 @@ class VideoWindow(QMainWindow):
         self.checkbox = QCheckBox("&Accumulate Attention", self)
         self.checkbox.clicked.connect(self.main3Dviewer.accumulate3D)
 
-        self.fillUpBox = QCheckBox("&Fill", self)
-        self.fillUpBox.setChecked(False)
-        self.fillUpBox.clicked.connect(self.main3Dviewer.fill_acc)
-
         self.colorCheck = QCheckBox("&Time Colors", self)
         self.colorCheck.setChecked(False)
         self.colorCheck.clicked.connect(lambda:self.toggle_color(self.colorCheck))
@@ -191,12 +191,6 @@ class VideoWindow(QMainWindow):
         openToy.setShortcut('Ctrl+L')
         openToy.setStatusTip('Opentoy file')
         openToy.triggered.connect(lambda checked, param=True: self.openFileToys(param) )
-
-
-        openKpt = QAction(QIcon('open.png'), '&Open Keypoint', self)        
-        openKpt.setShortcut('Ctrl+K')
-        openKpt.setStatusTip('Open Keypoint file')
-        openKpt.triggered.connect(self.openKptAtt)
         
         # Create exit action
         exitAction = QAction(QIcon('exit.png'), '&Exit', self)        
@@ -263,7 +257,6 @@ class VideoWindow(QMainWindow):
         fileMenu.addAction(openAtt)
         fileMenu.addAction(openAtt2)
         fileMenu.addAction(openToy)
-        fileMenu.addAction(openKpt)
         fileMenu.addAction(resetAction)
         fileMenu.addAction(load2dAction)
         fileMenu.addSeparator()
@@ -312,7 +305,13 @@ class VideoWindow(QMainWindow):
         view3DMenu = menuBar.addMenu('&Set 3D View')
         for i in range(8):
             view3DMenu.addAction(self.view3DAction[i])
-           
+            
+        #multiFileButton = QPushButton("&Open Multi File Visualizer")
+        multiFileButton_action = QAction("&Visualizer", self)
+        multiFileButton_action.triggered.connect(self.openMultiFileWidget)
+        #multiFileButton_action.setDefaultWidget(multiFileButton)
+        self.menuBar().addAction(multiFileButton_action)      
+        
         vizLayout = QVBoxLayout()
         vizLayout.addWidget(self.showVecButton)
         vizLayout.addWidget(self.showHullButton)
@@ -351,7 +350,6 @@ class VideoWindow(QMainWindow):
 
         control3DLayout = QHBoxLayout()
         control3DLayout.addWidget(self.checkbox)
-        control3DLayout.addWidget(self.fillUpBox)
         control3DLayout.addWidget(self.noneButton)
         control3DLayout.addWidget(self.vectorButton)#, alignment=Qt.AlignBottom)
         control3DLayout.addWidget(self.lineButton)
@@ -402,9 +400,7 @@ class VideoWindow(QMainWindow):
         self.playBackButton.setEnabled(True)
         self.playFrontButton.setEnabled(True)
         self.positionSlider.setRange(0, self.mediaPlayer.duration)
-        
 
-        
         self.minInt.setTop(self.mediaPlayer.duration - 10)
         self.maxInt.setTop(self.mediaPlayer.duration)
         self.correctionWidget.setHW(self.mediaPlayer.height_video, self.mediaPlayer.width_video)      
@@ -419,6 +415,7 @@ class VideoWindow(QMainWindow):
         if fileName != '':
             self.setFile(fileName)
             if not self.mediaPlayer.isVisible():
+                #self.setCentralWidget(self.mediaPlayer)
                 self.mediaPlayer.show()
 
     def openFileAtt(self, as_new=False):
@@ -441,14 +438,6 @@ class VideoWindow(QMainWindow):
 
     def compute2D(self):        
         self.mediaPlayer.compute2D(self.main3Dviewer.attention, self.correctionWidget.cams)
-
-    def openKptAtt(self):
-        fileName, _ = QFileDialog.getOpenFileName(self, "Open Keypoint file",
-                QDir.currentPath(), "NPY files (*.npy)")#, options=QFileDialog.DontUseNativeDialog)
-
-        if fileName != '':
-            self.main3Dviewer.attention = self.main3Dviewer.read_keypoints(fileName)
-
 
     def viewSelect(self):
         self.mediaPlayer.stop_video()
@@ -526,7 +515,23 @@ class VideoWindow(QMainWindow):
         self.correctionWidgetToys.update_combo_toy()
         self.mediaPlayer.set_annotation(True)
         self.main3Dviewer.set_annotation(True)
-                        
+                
+                
+    def openMultiFileWidget(self):
+        self.mediaPlayer.stop_video()
+        self.MFvisualizer.show()
+        self.MFvisualizer.raise_()
+        self.correctionWidgetToys.close()
+        self.correctionWidgetHands.close()
+        self.correctionWidget.close()
+        self.mediaPlayer.set_annotation(False)
+        self.main3Dviewer.set_annotation(False)
+        self.mediaPlayer.viz_flags["handL"] = False
+        self.mediaPlayer.viz_flags["handR"] = False
+        self.mediaPlayer.viz_flags["att"] = False
+        self.mediaPlayer.viz_flags["head"] = True
+        return
+         
     def exitCall(self):
         self.close()
 

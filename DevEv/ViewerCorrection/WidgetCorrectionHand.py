@@ -345,10 +345,10 @@ class CorrectionWindowHand(QWidget):
     def update_combobox(self):
         self.ComboBox.clear()
         self.ComboBox.addItem('All Segments')        
-        segments = self.viewer3D.segment
+        segments = self.viewer3D.segment.current
         if segments is None: return
-        for i, (s,e) in enumerate(segments):
-            self.ComboBox.addItem('S{} -> {} -{}'.format(i, s, e))
+        for i, (stype, s,e) in enumerate(segments):
+            self.ComboBox.addItem('S{} -> {} -{} ({})'.format(i, s, e, stype))
         self.ComboBox.setCurrentIndex(self.segmentIndex) 
         return
         
@@ -425,7 +425,7 @@ class CorrectionWindowHand(QWidget):
             if self.segmentIndex == 0: 
                 start, end = min(L), max(L)
             else:
-                start, end = self.viewer3D.segment[self.segmentIndex-1]       
+                _, start, end = self.viewer3D.segment.current[self.segmentIndex-1]       
             value = int(value)
             for x in np.arange(start, end, value, dtype=int):
                 if not x in L or x in self.frame_list: continue
@@ -652,7 +652,7 @@ class CorrectionWindowHand(QWidget):
                 frame_list.append(f)
                 x_tr.append(info)
             else:
-                start, end = self.viewer3D.segment[self.segmentIndex-1]
+                _, start, end = self.viewer3D.segment.current[self.segmentIndex-1]
                 if start <= f <= end: 
                     frame_list.append(f)
                     x_tr.append(info)
@@ -687,8 +687,8 @@ class CorrectionWindowHand(QWidget):
         if self.viewer3D.segment is None:
             message += "No segments\n"
         else:
-            for i, (s,e) in enumerate(self.viewer3D.segment):
-                message += "Segment {} -> {} - {}\n".format(i, s, e)
+            for i, (stype, s,e) in enumerate(self.viewer3D.segment):
+                message += "Segment {} -> {} - {} ({})\n".format(i, s, e, stype)
         if len(self.history_corrected) == 0:
             message += "\nNo Corrected Frames"
         else:

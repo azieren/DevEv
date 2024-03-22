@@ -10,5 +10,6 @@ global-include *.json
 global-include *.ply
 global-include *.mtl
 global-include *.obj
+global-include *.csv
 global-exclude __pycache__
 global-exclude *.py[co]
