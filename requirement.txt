@@ -1,7 +1,0 @@
-numpy
-scipy
-matplotlib
-opencv-python
-pyqtgraph
-PyQt5
-PyOpenGL
