@@ -216,17 +216,17 @@ class VideoWindow(QMainWindow):
             action.triggered.connect(self.viewSelect)
             self.viewAction.append(action)
 
-        correctAction = QAction(QIcon('exit.png'), '&Att correction tool', self)        
+        correctAction = QAction(QIcon('exit.png'), '&Attention/Head', self)        
         correctAction.setShortcut('Ctrl+C')
         correctAction.setStatusTip('Correction Tool Attention')
         correctAction.triggered.connect(self.correctSelect)
 
-        correctHAction = QAction(QIcon('exit.png'), '&Hands correction tool', self)        
+        correctHAction = QAction(QIcon('exit.png'), '&Hands', self)        
         correctHAction.setShortcut('Ctrl+H')
         correctHAction.setStatusTip('Correction Tool Hands')
         correctHAction.triggered.connect(self.correctHSelect)
 
-        correctToyAction = QAction(QIcon('exit.png'), '&Toys correction tool', self)        
+        correctToyAction = QAction(QIcon('exit.png'), '&Toys', self)        
         correctToyAction.setShortcut('Ctrl+T')
         correctToyAction.setStatusTip('Correction Tool Toys')
         correctToyAction.triggered.connect(self.correctToySelect)

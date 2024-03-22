@@ -18,7 +18,7 @@ class RoomManager():
         self.toy_to_update = []
         self.room_texture = []
         self.toy_objects = {}
-        #self.read_room()
+        self.read_room()
         
     def read_toys(self, filename= "", as_new = False):
         if not os.path.exists(filename): 
