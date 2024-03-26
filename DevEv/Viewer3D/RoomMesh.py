@@ -151,7 +151,6 @@ class RoomManager():
                 center = compute_bounding_box_center(vert)
                 self.toy_objects[name.replace("toy_", "")] = {"item":toy, "center":center, 
                                                                 "data":{}, "default_center":center}
-                print(name)
                 continue
             
             vertices.append(vert)

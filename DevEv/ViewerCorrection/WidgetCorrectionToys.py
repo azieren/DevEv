@@ -579,10 +579,11 @@ class CorrectionWindowToys(QWidget):
             poses = np.array([toy["data"][start]["p3d"], toy["data"][end]["p3d"]])
             interp_func = interpolate.interp1d(np.array([start,end]), poses, axis=0, kind = 'linear')    
             x_interp = interp_func(np.arange(start, end, 1))
+            #print(corrected_list[i], start, end)
             for i, f in enumerate(range(start, end)):
                 if f not in toy["data"]: toy["data"][f] = {}
                 toy["data"][f]["p3d"] = x_interp[i, :3]
-        
+
         if corrected_list[-1]-1 in frame_list or  corrected_list[-1]+1 in frame_list: to_keep.append(i+1)               
         if len(to_keep) == 0: return     
         corrected_list = corrected_list[to_keep]
