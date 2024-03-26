@@ -8,9 +8,22 @@ import pkg_resources
 from .TexturedMesh import OBJ, GLMeshTexturedItem, MTL
 
 TOY_MAPPING = {
-    'pink_ball':'pink_ballon', 'tower_bloc':'red_tower', 'cylinder_tower':'tower', 'ball_container':'bucket',
+    'pink_ballon':'pink_ball', 'tower_bloc':'red_tower', 'cylinder_tower':'tower', 'ball_container':'bucket',
 }
 
+
+def compute_bounding_box_center(vertices):
+    # Convert the list of vertices to a NumPy array for easier manipulation
+    vertices_array = np.array(vertices)
+
+    # Compute the minimum and maximum coordinates along each axis (x, y, z)
+    min_coords = np.min(vertices_array, axis=0)
+    max_coords = np.max(vertices_array, axis=0)
+
+    # Calculate the center point by averaging the minimum and maximum coordinates along each axis
+    bounding_box_center = (min_coords + max_coords) / 2
+
+    return bounding_box_center
 
 class RoomManager():
     def __init__(self, viewer3D):
@@ -26,7 +39,7 @@ class RoomManager():
         
         self.toy_to_update = []
         data = np.load(filename, allow_pickle=True).item()
-        for n, obj in self.room.toy_objects.items():
+        for n, obj in self.toy_objects.items():
             name = n
             if n in TOY_MAPPING: name = TOY_MAPPING[n]
             if name in data and len(data[name]) > 0:
@@ -100,7 +113,7 @@ class RoomManager():
             #normal = np.array(ob["normals"]).reshape(-1, 3)
 
             mtl = self.mtl_data.contents[ob["material"][0]]
-            if 'map_Kd' in  mtl:
+            if 'map_Kd' in  mtl and "toy_" not in name:
                 #continue
                 #if "Carpet3.png" in mtl["map_Kd"] or "SquareMat2.png" in mtl["map_Kd"]:
                 texture = {"coords":np.array(ob["textures"]).reshape(-1, 2) , "name":ob["material"][0], "mtl":self.mtl_data.contents}
@@ -135,8 +148,10 @@ class RoomManager():
                 toy.parseMeshData()
                 self.viewer3D.addItem(toy)
                 toy.opts['drawEdges'] = False
-                self.toy_objects[name.replace("toy_", "")] = {"item":toy, "center":np.mean(vert, axis = 0), 
-                                                                "data":{}, "default_center":np.mean(vert, axis = 0)}
+                center = compute_bounding_box_center(vert)
+                self.toy_objects[name.replace("toy_", "")] = {"item":toy, "center":center, 
+                                                                "data":{}, "default_center":center}
+                print(name)
                 continue
             
             vertices.append(vert)

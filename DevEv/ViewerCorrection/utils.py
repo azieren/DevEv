@@ -297,7 +297,7 @@ def write_results_toy(tool, fileName = None):
             return
     print("Writing ", tool.history_corrected)
     data_final = {}
-    for n, obj in tool.viewer3D.toy_objects.items():
+    for n, obj in tool.viewer3D.room.toy_objects.items():
         data_final[n] = obj["data"]
             
     np.save(fileName, data_final)

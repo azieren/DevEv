@@ -426,6 +426,7 @@ class VideoWindow(QMainWindow):
             self.main3Dviewer.attention = self.main3Dviewer.read_attention(fileName, as_new=as_new)
             self.correctionWidget.update_list_frames()
             self.correctionWidgetHands.update_list_frames()
+            self.correctionWidgetToys.update_combobox() 
             #self.compute2D()
 
     def openFileToys(self, as_new=False):
@@ -433,8 +434,9 @@ class VideoWindow(QMainWindow):
                 QDir.currentPath(), "Numpy files (*.npy)")#, options=QFileDialog.DontUseNativeDialog)
         
         if fileName != '':
-            self.main3Dviewer.attention = self.main3Dviewer.read_toys(fileName, as_new=as_new)
-            #self.compute2D()            
+            self.main3Dviewer.read_toys(fileName, as_new=as_new)
+            #self.compute2D()     
+                  
 
     def compute2D(self):        
         self.mediaPlayer.compute2D(self.main3Dviewer.attention, self.correctionWidget.cams)

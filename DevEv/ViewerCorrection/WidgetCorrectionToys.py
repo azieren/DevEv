@@ -37,7 +37,7 @@ class CorrectionWindowToys(QWidget):
     def __init__(self, viewer3D):
         super().__init__()
 
-        self.setWindowTitle("Correction Tool Hands") 
+        self.setWindowTitle("Correction Tool Toys") 
         self.resize(400 , 200 )
 
         self.viewer3D = viewer3D
@@ -326,8 +326,8 @@ class CorrectionWindowToys(QWidget):
         self.ComboBox.addItem('All Segments')        
         segments = self.viewer3D.segment.current
         if segments is None: return
-        for i, (s,e) in enumerate(segments):
-            self.ComboBox.addItem('S{} -> {} -{}'.format(i, s, e))
+        for i, (stype, s,e) in enumerate(segments):
+            self.ComboBox.addItem('S{} -> {} -{} ({})'.format(i, s, e, stype))
         self.ComboBox.setCurrentIndex(self.segmentIndex) 
         return
         
@@ -408,7 +408,7 @@ class CorrectionWindowToys(QWidget):
             if self.segmentIndex == 0: 
                 start, end = min(L), max(L)
             else:
-                start, end = self.viewer3D.segment.current[self.segmentIndex-1]       
+                _, start, end = self.viewer3D.segment.current[self.segmentIndex-1]       
             value = int(value)
             for x in np.arange(start, end, value, dtype=int):
                 if not x in L or x in self.frame_list: continue
