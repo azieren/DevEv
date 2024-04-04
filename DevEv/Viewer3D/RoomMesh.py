@@ -31,7 +31,7 @@ class RoomManager():
         self.toy_to_update = []
         self.room_texture = []
         self.toy_objects = {}
-        self.read_room()
+        self.read_room() 
         
     def read_toys(self, filename= "", as_new = False):
         if not os.path.exists(filename): 
@@ -95,13 +95,13 @@ class RoomManager():
         self.mtl_data = MTL(filename=mtl_file)
         self.viewer3D.addItem(self.mtl_data)
 
-        vertices = []
-        faces = []
+        vertices, vertices_ceiling = [], []
+        faces, faces_ceiling = [], []
         #normals = []
-        colors = []
+        colors, colors_ceiling = [], []
         self.room_textured = []
         self.toy_objects = {}
-        count = 0
+        count, count_ceiling = 0, 0
         for name, ob in obj.content.items():
             if len(ob["material"]) == 0: 
                 print(name, np.array(ob["vertexes"]).shape)
@@ -153,27 +153,41 @@ class RoomManager():
                                                                 "data":{}, "default_center":center}
                 continue
             
-            vertices.append(vert)
-            colors.append(color)
-            #normals.append(normal)
-            faces.append(face + count)
-            count += face[-1][-1] + 1
+            z_avg = np.mean(vert[:,-1])
+            if z_avg > 2.75: 
+                vertices_ceiling.append(vert)
+                colors_ceiling.append(color)
+                #normals.append(normal)
+                faces_ceiling.append(face + count_ceiling)
+                count_ceiling += face[-1][-1] + 1
+            else:
+                vertices.append(vert)
+                colors.append(color)
+                #normals.append(normal)
+                faces.append(face + count)
+                count += face[-1][-1] + 1
             
-        vertices = np.concatenate(vertices, axis = 0)
-        faces = np.concatenate(faces, axis = 0)
-        colors = np.concatenate(colors, axis = 0)   
+        vertices, vertices_ceiling = np.concatenate(vertices, axis = 0), np.concatenate(vertices_ceiling, axis = 0)
+        faces, faces_ceiling = np.concatenate(faces, axis = 0), np.concatenate(faces_ceiling, axis = 0)
+        colors, colors_ceiling = np.concatenate(colors, axis = 0), np.concatenate(colors_ceiling, axis = 0)     
         #normals = np.concatenate(normals, axis = 0)  
         mesh_data = gl.MeshData(vertexes=vertices, faces=faces, vertexColors=colors)
+        mesh_data_ceiling = gl.MeshData(vertexes=vertices_ceiling, faces=faces_ceiling, vertexColors=colors_ceiling)
 
         self.room = gl.GLMeshItem(meshdata=mesh_data, smooth=True, drawEdges=True, glOptions=option_gl)
+        self.ceiling = gl.GLMeshItem(meshdata=mesh_data_ceiling, smooth=True, drawEdges=True, glOptions=option_gl)
         self.room.parseMeshData()
+        self.ceiling.parseMeshData()
         self.viewer3D.addItem(self.room)
+        self.viewer3D.addItem(self.ceiling)
 
         for item in self.room_textured:
             item.opts['drawFaces'] = True
             item.opts['drawEdges'] = False
         self.room.opts['drawFaces'] = True
         self.room.opts['drawEdges'] = False
+        self.ceiling.opts['drawFaces'] = True
+        self.ceiling.opts['drawEdges'] = False
 
         """#print(obj.faces)
         vert = np.array(obj.vertexes).reshape(-1, 3)
@@ -213,6 +227,9 @@ class RoomManager():
             self.room.opts['drawFaces'] = False
             self.room.opts['drawEdges'] = True
             self.room.updateGLOptions({GL_DEPTH_TEST: True})
+            self.ceiling.opts['drawFaces'] = False
+            self.ceiling.opts['drawEdges'] = True
+            self.ceiling.updateGLOptions({GL_DEPTH_TEST: True})
         elif view == 2:
             # Transparent
             for item in self.room_textured:
@@ -221,10 +238,17 @@ class RoomManager():
                 #item.setOpacity(0.2)
             self.room.opts['drawFaces'] = True
             self.room.opts['drawEdges'] = False
+            self.ceiling.opts['drawFaces'] = True
+            self.ceiling.opts['drawEdges'] = False
+            
             c = self.room.colors
             c[:,-1] = 0.4
             self.room.setColor(c)
             self.room.updateGLOptions({GL_DEPTH_TEST: False})
+            c = self.ceiling.colors
+            c[:,-1] = 0.4
+            self.ceiling.setColor(c)
+            self.ceiling.updateGLOptions({GL_DEPTH_TEST: False})
         elif view == 3:
             for item in self.room_textured:
                 item.opts['drawFaces'] = True
@@ -233,13 +257,24 @@ class RoomManager():
             self.room.opts['drawFaces'] = True
             self.room.opts['drawEdges'] = False
             self.room.updateGLOptions({GL_DEPTH_TEST: True})
+            self.ceiling.opts['drawFaces'] = True
+            self.ceiling.opts['drawEdges'] = False
+            self.ceiling.updateGLOptions({GL_DEPTH_TEST: True})
             c = self.room.colors
             c[:,-1] = 1.0
-            self.room.setColor(c)
+            self.ceiling.setColor(c)
+            c = self.ceiling.colors
+            c[:,-1] = 1.0
+            self.ceiling.setColor(c)
         return
-    
+
+    def setCeiling(self, state):
+        self.ceiling.setVisible(not state)      
+        return
+       
     def clearRoom(self, state):
         self.room.setVisible(not state)
+        self.ceiling.setVisible(not state)
         for obj in self.room_textured:
             obj.setVisible(not state)
         for n, obj in self.toy_objects.items():

@@ -9,9 +9,11 @@ class SegmentManager():
         self.timestamps = self.read_timestamps()
         self.current = None
         self.category_mapping = {"c":"mat self play", "p":"parent play", "r":"room self play"}
+        self.data_current = None
         
     def setCurrent(self, segment, name = ""):
         self.current = segment
+        self.data_current = segment
         sess_name = re.findall(r'\d\d_\d\d', name)
         if len(sess_name) == 0 or not sess_name[0] in self.timestamps: 
             self.current = segment

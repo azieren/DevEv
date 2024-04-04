@@ -12,7 +12,7 @@ from scipy import interpolate
 from scipy.ndimage import gaussian_filter as filter1d
 
 from .GaussianProcess import get_uncertainty
-from .utils import rotation_matrix_from_vectors, project_2d, build_mask, to_3D, write_results, get_quadrant
+from .utils import rotation_matrix_from_vectors, project_2d, build_mask, to_3D, write_results, get_quadrant, show_message
 from .ThreeIntWidget import ThreeEntryDialog
 
 class ListWidgetItem(QListWidgetItem):
@@ -854,19 +854,7 @@ class CorrectionWindow(QWidget):
         return
 
     def showCorrected(self):
-        message = ''
-        if self.viewer3D.segment.current is None:
-            message += "No segments\n"
-        else:
-            for i, (stype, s,e) in enumerate(self.viewer3D.segment.current):
-                message += "Segment {} -> {} - {} ({})\n".format(i, s, e, stype)
-        if len(self.history_corrected) == 0:
-            message += "\nNo Corrected Frames"
-        else:
-            message += '\n{} Corrected Frames:\n'.format(len(self.history_corrected))
-            message += ", ".join([ str(x) for x, y in self.history_corrected.items() if y == 1])
-        print(message)
-        QMessageBox.about(self, "Info", message)
+        show_message(self)
         return
 
     def write_attention(self, fileName = None, is_temp = False):

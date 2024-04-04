@@ -51,7 +51,6 @@ class VideoWindow(QMainWindow):
         self.correctionWidgetHands.project3dButtonRight.clicked.connect(self.mediaPlayer.send_annotation_handR)
         self.mediaPlayer.annotations_id.connect(self.correctionWidgetHands.project3D)
 
-
         self.correctionWidgetToys = CorrectionWindowToys(self.main3Dviewer)
         self.correctionWidgetToys.setWindowFlags(Qt.WindowStaysOnTopHint)
         self.correctionWidgetToys.pose2d.connect(self.mediaPlayer.update_image_proj)
@@ -94,6 +93,11 @@ class VideoWindow(QMainWindow):
         self.clearRoomButton.setChecked(False)
         self.clearRoomButton.clicked.connect(self.main3Dviewer.clearRoom)
 
+        self.clearCeilingButton = QCheckBox("&Hide ceiling", self)
+        self.clearCeilingButton.setEnabled(True)
+        self.clearCeilingButton.setChecked(False)
+        self.clearCeilingButton.clicked.connect(self.main3Dviewer.room.setCeiling)
+        
         self.showAllButton = QCheckBox("&Show Range", self)
         self.showAllButton.setChecked(False)
         self.showAllButton.clicked.connect(self.showAll)
@@ -322,6 +326,7 @@ class VideoWindow(QMainWindow):
         sceneBLayout.addWidget(self.speedCheckBox)
         sceneBLayout.addWidget(self.resetButton)
         sceneBLayout.addWidget(self.clearRoomButton)
+        sceneBLayout.addWidget(self.clearCeilingButton)
 
         controlVidLayout = QHBoxLayout()
         controlVidLayout.addWidget(self.playBackButton)

@@ -2,8 +2,36 @@ import numpy as np
 import cv2 
 from scipy.spatial.transform import Rotation
 
-from PyQt5.QtWidgets import QFileDialog
+from PyQt5.QtWidgets import QFileDialog, QMessageBox
 from PyQt5.QtCore import QDir
+
+def show_message(parent):
+    message = ''
+    if parent.viewer3D.segment.current is None:
+        message += "No segments from timestamps found\n"
+    else:
+        message += "Segments from timestamps:\n"
+        for i, (stype, s,e) in enumerate(parent.viewer3D.segment.current):
+            if len(stype) == 0: 
+                message += "Timestamps not found\n"
+                break
+            message += "\tSegment {} -> {} - {} ({})\n".format(i, s, e, stype)
+    if parent.viewer3D.segment.data_current is None:
+        message += "No segments from data found\n"
+    else:
+        message += "Segments from data:\n"
+        for i, (stype, s,e) in enumerate(parent.viewer3D.segment.data_current):
+            message += "\tSegment {} -> {} - {} ({})\n".format(i, s, e, stype)
+             
+    if len(parent.history_corrected) == 0:
+        message += "\nNo Corrected Frames"
+    else:
+        message += '\n{} Corrected Frames:\n'.format(len(parent.history_corrected))
+        message += ", ".join([ str(x) for x, y in parent.history_corrected.items() if y == 1])
+    print(message)
+    QMessageBox.about(parent, "Info Hands", message)
+    return
+
 
 def get_quadrant(gt, num_quadrants):
     # Assuming gt is a 3D normalized vector
